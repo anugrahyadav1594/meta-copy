@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metascale"
+version = "0.1.0"
+description = "MetaScale — an educational distributed social-media database (canonical DB + sharding foundation)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "MetaScale academic project" }]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "SQLAlchemy>=2.0.29",
+    "psycopg[binary]>=3.1",
+    "alembic>=1.13",
+    "httpx>=0.27",
+    # Distributed cache (Member 6)
+    "redis>=5.0,<6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "black>=24.4",
+    "mypy>=1.10",
+    "pgserver>=0.1.4; platform_system == 'Linux'",
+    # In-process fake Redis for cache tests (dev/test ONLY — never deployment)
+    "fakeredis>=2.21",
+]
+
+[tool.setuptools.packages.find]
+where = ["packages", "services/shard-router", ".", "apps"]
+include = ["common*", "models*", "schemas*", "db*", "events*", "router*", "metadata*", "health*", "queries*", "rebalance*", "hotspots*", "metrics*", "api*", "services.cache*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["migrations", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+# E501 line length (black/compat), B008 FastAPI Depends() defaults,
+# UP042 intentional str+Enum for portable serialization.
+ignore = ["E501", "B008", "UP042"]
+
+[tool.ruff.lint.per-file-ignores]
+# Bootstrap sys.path before first import in standalone scripts/benchmarks.
+"scripts/*" = ["E402"]
+"benchmarks/*" = ["E402"]
+"migrations/*" = ["E402", "I"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = false
+warn_return_any = false
+no_implicit_optional = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests", "services/shard-router/tests", "services/cache/tests"]
+pythonpath = ["packages", "services/shard-router", "apps", "."]
+addopts = "-ra -q"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+markers = [
+    "integration: tests requiring real PostgreSQL clusters",
+    "contract: API contract tests",
+]
+
+[tool.coverage.run]
+source = ["packages", "services/shard-router", "services/cache", "apps"]
