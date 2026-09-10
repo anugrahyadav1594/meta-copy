@@ -1,0 +1,1 @@
+"""MetaScale FastAPI application package."""
