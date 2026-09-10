@@ -24,6 +24,7 @@ TAGS = [
     {"name": "system", "description": "Liveness/readiness"},
     {"name": "users", "description": "Canonical user API (mode-aware)"},
     {"name": "posts", "description": "Canonical post/comment API (mode-aware)"},
+    {"name": "feed", "description": "Social news feed"},
     {"name": "sharding", "description": "Shard admin and sharded data endpoints (Member 4)"},
     {"name": "demo", "description": "Educational/demo-only endpoints"},
 ]
@@ -110,6 +111,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # -------------------------------------------------------------- routes
     from api.routes.health import router as health_router
+    from api.routes.feed import router as feed_router
     from api.routes.posts import router as posts_router
     from api.routes.shards import router as shards_router
     from api.routes.users import router as users_router
@@ -117,6 +119,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(users_router, prefix=settings.api_v1_prefix)
     app.include_router(posts_router, prefix=settings.api_v1_prefix)
+    app.include_router(feed_router, prefix=settings.api_v1_prefix)
     app.include_router(shards_router, prefix=settings.api_v1_prefix)
 
     @app.get("/", include_in_schema=False)
