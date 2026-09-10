@@ -1,0 +1,203 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAO Social Graph</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <div class="header-inner">
+            <div class="header-logo">
+                <span class="logo-icon">⬡</span>
+                <div>
+                    <h1>TAO Social Graph</h1>
+                    <p>Graph-oriented social relationship layer</p>
+                </div>
+            </div>
+            <div class="header-status">
+                <span id="statusBadge" class="status-badge status-idle">Idle</span>
+            </div>
+        </div>
+    </header>
+
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <main class="dashboard">
+
+        <aside class="sidebar">
+
+            <section class="card" id="userMgmtCard">
+                <div class="card-header">
+                    <span class="card-icon">👤</span>
+                    <h2>User Management</h2>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Add New User</label>
+                    <div class="input-row">
+                        <input type="text" id="addUserInput" class="input" placeholder="Enter name…" maxlength="60" />
+                        <button id="addUserBtn" class="btn btn-primary">Add</button>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="form-group">
+                    <label class="form-label">Update User</label>
+                    <select id="updateUserSelect" class="select">
+                        <option value="">— select user —</option>
+                    </select>
+                    <div class="input-row" style="margin-top:8px;">
+                        <input type="text" id="updateUserInput" class="input" placeholder="New name…" maxlength="60" />
+                        <button id="updateUserBtn" class="btn btn-warning">Save</button>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="form-group">
+                    <label class="form-label">Delete User</label>
+                    <div class="input-row">
+                        <select id="deleteUserSelect" class="select" style="flex:1;">
+                            <option value="">— select user —</option>
+                        </select>
+                        <button id="deleteUserBtn" class="btn btn-danger">Delete</button>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <button id="refreshUsersBtn" class="btn btn-ghost btn-full">↻ Refresh Users</button>
+            </section>
+
+            <section class="card" id="relMgmtCard">
+                <div class="card-header">
+                    <span class="card-icon">🔗</span>
+                    <h2>Relationships</h2>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Follower</label>
+                    <select id="followerSelect" class="select">
+                        <option value="">— select user —</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Following</label>
+                    <select id="followingSelect" class="select">
+                        <option value="">— select user —</option>
+                    </select>
+                </div>
+
+                <div class="btn-row">
+                    <button id="followBtn" class="btn btn-primary btn-half">＋ Follow</button>
+                    <button id="unfollowBtn" class="btn btn-danger btn-half">− Unfollow</button>
+                </div>
+            </section>
+
+        </aside>
+
+        <div class="content">
+
+            <section class="card user-selector-card">
+                <div class="user-selector-row">
+                    <div class="selector-left">
+                        <span class="card-icon">🎯</span>
+                        <div>
+                            <label class="form-label" for="userSelect">Active User</label>
+                            <select id="userSelect" class="select select-lg">
+                                <option value="">— select a user —</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="loadGraphBtn" class="btn btn-primary btn-lg">Show Graph</button>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-card clickable" id="statFollowing">
+                        <div class="stat-icon">➡️</div>
+                        <div class="stat-body">
+                            <div class="stat-value" id="followingCount">—</div>
+                            <div class="stat-label">Following</div>
+                        </div>
+                    </div>
+                    <div class="stat-card clickable" id="statFollowers">
+                        <div class="stat-icon">⬅️</div>
+                        <div class="stat-body">
+                            <div class="stat-value" id="followersCount">—</div>
+                            <div class="stat-label">Followers</div>
+                        </div>
+                    </div>
+                    <div class="stat-card clickable" id="statFriends">
+                        <div class="stat-icon">🤝</div>
+                        <div class="stat-body">
+                            <div class="stat-value" id="friendsCount">—</div>
+                            <div class="stat-label">Friends</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rel-btn-row">
+                    <button class="btn btn-outline rel-tab" data-type="following">Following</button>
+                    <button class="btn btn-outline rel-tab" data-type="followers">Followers</button>
+                    <button class="btn btn-outline rel-tab" data-type="friends">Friends</button>
+                </div>
+            </section>
+
+            <section class="card" id="relPanel" style="display:none;">
+                <div class="card-header">
+                    <span class="card-icon" id="relPanelIcon">🔍</span>
+                    <h2 id="relPanelTitle">Relationship Details</h2>
+                    <button id="relPanelClose" class="btn btn-ghost btn-sm" style="margin-left:auto;">✕</button>
+                </div>
+                <div id="relPanelBody" class="user-list"></div>
+            </section>
+
+            <section class="card" id="mutualCard">
+                <div class="card-header">
+                    <span class="card-icon">🔀</span>
+                    <h2>Mutual Friends</h2>
+                </div>
+                <div class="input-row">
+                    <select id="mutualSelect" class="select" style="flex:1;">
+                        <option value="">— compare with user —</option>
+                    </select>
+                    <button id="mutualBtn" class="btn btn-primary">Check</button>
+                </div>
+                <div id="mutualResult" class="user-list" style="margin-top:12px;"></div>
+            </section>
+
+            <section class="card graph-card">
+                <div class="card-header graph-header">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="card-icon">🕸️</span>
+                        <h2>Social Graph</h2>
+                    </div>
+                    <div class="graph-legend">
+                        <span class="legend-item"><span class="legend-dot legend-center"></span>Selected</span>
+                        <span class="legend-item"><span class="legend-dot legend-node"></span>Connected</span>
+                        <span class="legend-item"><span class="legend-line legend-follows"></span>Follows</span>
+                        <span class="legend-item"><span class="legend-line legend-mutual"></span>Mutual</span>
+                    </div>
+                </div>
+                <div id="graphContainer" class="graph-container">
+                    <div class="graph-empty" id="graphEmpty">
+                        <div class="graph-empty-icon">⬡</div>
+                        <p>Select a user and click <strong>Show Graph</strong></p>
+                    </div>
+                    <svg id="graphSvg" class="graph-svg" style="display:none;"></svg>
+                    <div id="graphNodes" class="graph-nodes"></div>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
