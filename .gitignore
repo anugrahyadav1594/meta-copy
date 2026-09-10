@@ -1,7 +1,44 @@
-.env
-*.log
-.DS_Store
-.vscode/
-.idea/
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pgpass
+
+# Test / coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Local PostgreSQL data
+.pgdata/
+pgdata/
+
+# Benchmark results
+benchmarks/results/raw/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Logs
+*.log

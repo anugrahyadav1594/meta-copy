@@ -1,0 +1,13 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pgdata/
+benchmarks/results/raw/
+.git/
+*.md
+!README.md
+.env
