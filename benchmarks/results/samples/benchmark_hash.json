@@ -1,0 +1,145 @@
+{
+  "benchmark": "benchmark_hash",
+  "sample_size": 100000,
+  "routing_rows": [
+    {
+      "samples": 20000,
+      "avg_latency_ms": 0.0037,
+      "p50_latency_ms": 0.0031,
+      "p95_latency_ms": 0.0066,
+      "p99_latency_ms": 0.0197,
+      "max_latency_ms": 0.1107,
+      "shard_count": 1,
+      "strategy": "hash",
+      "setup_ms": 0.003,
+      "throughput_rps": 260157.0,
+      "elapsed_ms": 76.88,
+      "virtual_nodes_per_shard": 150
+    },
+    {
+      "samples": 20000,
+      "avg_latency_ms": 0.0034,
+      "p50_latency_ms": 0.0033,
+      "p95_latency_ms": 0.0036,
+      "p99_latency_ms": 0.0069,
+      "max_latency_ms": 0.0676,
+      "shard_count": 1,
+      "strategy": "consistent_hash",
+      "setup_ms": 0.801,
+      "throughput_rps": 283431.0,
+      "elapsed_ms": 70.56,
+      "virtual_nodes_per_shard": 150
+    },
+    {
+      "samples": 20000,
+      "avg_latency_ms": 0.0031,
+      "p50_latency_ms": 0.003,
+      "p95_latency_ms": 0.0032,
+      "p99_latency_ms": 0.0059,
+      "max_latency_ms": 0.0425,
+      "shard_count": 2,
+      "strategy": "hash",
+      "setup_ms": 0.006,
+      "throughput_rps": 314336.0,
+      "elapsed_ms": 63.63,
+      "virtual_nodes_per_shard": 150
+    },
+    {
+      "samples": 20000,
+      "avg_latency_ms": 0.0034,
+      "p50_latency_ms": 0.0034,
+      "p95_latency_ms": 0.0036,
+      "p99_latency_ms": 0.0066,
+      "max_latency_ms": 0.0513,
+      "shard_count": 2,
+      "strategy": "consistent_hash",
+      "setup_ms": 1.476,
+      "throughput_rps": 281637.0,
+      "elapsed_ms": 71.01,
+      "virtual_nodes_per_shard": 150
+    },
+    {
+      "samples": 20000,
+      "avg_latency_ms": 0.0031,
+      "p50_latency_ms": 0.003,
+      "p95_latency_ms": 0.0033,
+      "p99_latency_ms": 0.0063,
+      "max_latency_ms": 0.0902,
+      "shard_count": 4,
+      "strategy": "hash",
+      "setup_ms": 0.005,
+      "throughput_rps": 310567.0,
+      "elapsed_ms": 64.4,
+      "virtual_nodes_per_shard": 150
+    },
+    {
+      "samples": 20000,
+      "avg_latency_ms": 0.0035,
+      "p50_latency_ms": 0.0034,
+      "p95_latency_ms": 0.0037,
+      "p99_latency_ms": 0.007,
+      "max_latency_ms": 0.0469,
+      "shard_count": 4,
+      "strategy": "consistent_hash",
+      "setup_ms": 3.936,
+      "throughput_rps": 276004.0,
+      "elapsed_ms": 72.46,
+      "virtual_nodes_per_shard": 150
+    },
+    {
+      "samples": 20000,
+      "avg_latency_ms": 0.0031,
+      "p50_latency_ms": 0.003,
+      "p95_latency_ms": 0.0032,
+      "p99_latency_ms": 0.0063,
+      "max_latency_ms": 0.0505,
+      "shard_count": 8,
+      "strategy": "hash",
+      "setup_ms": 0.005,
+      "throughput_rps": 312986.0,
+      "elapsed_ms": 63.9,
+      "virtual_nodes_per_shard": 150
+    },
+    {
+      "samples": 20000,
+      "avg_latency_ms": 0.0035,
+      "p50_latency_ms": 0.0034,
+      "p95_latency_ms": 0.0037,
+      "p99_latency_ms": 0.0069,
+      "max_latency_ms": 0.1352,
+      "shard_count": 8,
+      "strategy": "consistent_hash",
+      "setup_ms": 5.898,
+      "throughput_rps": 275032.0,
+      "elapsed_ms": 72.72,
+      "virtual_nodes_per_shard": 150
+    }
+  ],
+  "distribution_4_shards_consistent_hash": {
+    "shard-0": 24.52,
+    "shard-1": 25.74,
+    "shard-2": 24.03,
+    "shard-3": 25.72
+  },
+  "movement_4_to_5": [
+    {
+      "strategy": "hash",
+      "old_shards": 4,
+      "new_shards": 5,
+      "sample_keys": 100000,
+      "keys_moved": 79844,
+      "pct_moved": 79.84,
+      "theoretical_min_pct": 20.0
+    },
+    {
+      "strategy": "consistent_hash",
+      "old_shards": 4,
+      "new_shards": 5,
+      "sample_keys": 100000,
+      "keys_moved": 23055,
+      "pct_moved": 23.05,
+      "theoretical_min_pct": 20.0
+    }
+  ],
+  "determinism_note": "murmur3 hashing is stable across processes; built-in hash() is never used"
+}
