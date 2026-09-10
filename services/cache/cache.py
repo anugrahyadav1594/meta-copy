@@ -1,147 +1,95 @@
 import json
-import redis
 import time
+from typing import Any
+
+import redis
 
 
-# Redis connection
-redis_client = redis.Redis(
-    host="localhost",
-    port=6379,
-    decode_responses=True
-)
+class CacheProvider:
+    def __init__(self, redis_url: str, default_ttl: int = 60):
+        self.client = redis.from_url(
+            redis_url,
+            decode_responses=True,
+        )
+        self.default_ttl = default_ttl
 
+        self.cache_hits = 0
+        self.cache_misses = 0
+        self.db_queries_avoided = 0
+        self.total_latency = 0.0
+        self.cache_requests = 0
 
-# -----------------------------
-# Cache Metrics
-# -----------------------------
+        self.key_access_count: dict[str, int] = {}
+        self.hot_key_limit = 5
 
-cache_hits = 0
-cache_misses = 0
-db_queries_avoided = 0
+    def get(self, key: str) -> Any | None:
+        start = time.perf_counter()
 
-total_cache_latency = 0
-cache_requests = 0
+        data = self.client.get(key)
 
+        latency = (time.perf_counter() - start) * 1000
+        self.total_latency += latency
+        self.cache_requests += 1
 
-# -----------------------------
-# Hot Key Detection
-# -----------------------------
+        self.key_access_count[key] = self.key_access_count.get(key, 0) + 1
 
-key_access_count = {}
+        if self.key_access_count[key] >= self.hot_key_limit:
+            print(f"HOT KEY DETECTED: {key}")
 
-HOT_KEY_LIMIT = 5
+        if data is not None:
+            self.cache_hits += 1
+            self.db_queries_avoided += 1
+            print(f"CACHE HIT: {key}")
+            return json.loads(data)
 
+        self.cache_misses += 1
+        print(f"CACHE MISS: {key}")
+        return None
 
-# -----------------------------
-# Get data from Redis
-# -----------------------------
+    def set(self, key: str, value: Any, ttl: int | None = None) -> None:
+        if ttl is None:
+            ttl = self.default_ttl
 
-def get_cache(key):
+        self.client.set(
+            key,
+            json.dumps(value),
+            ex=ttl,
+        )
 
-    global cache_hits
-    global cache_misses
-    global db_queries_avoided
-    global total_cache_latency
-    global cache_requests
+        print(f"CACHE SET: {key} (TTL={ttl}s)")
 
-    start_time = time.perf_counter()
+    def delete(self, key: str) -> None:
+        self.client.delete(key)
+        self.key_access_count.pop(key, None)
 
-    data = redis_client.get(key)
+        print(f"CACHE INVALIDATED: {key}")
 
-    latency = (time.perf_counter() - start_time) * 1000
+    def get_metrics(self) -> dict:
+        total = self.cache_hits + self.cache_misses
 
-    total_cache_latency += latency
-    cache_requests += 1
+        hit_ratio = (
+            (self.cache_hits / total) * 100
+            if total > 0
+            else 0
+        )
 
-    # Track how many times this key is requested
-    key_access_count[key] = key_access_count.get(key, 0) + 1
-
-    if key_access_count[key] >= HOT_KEY_LIMIT:
-        print(f"HOT KEY DETECTED: {key}")
-
-    # Cache hit
-    if data:
-
-        cache_hits += 1
-        db_queries_avoided += 1
-
-        print(f"CACHE HIT: {key}")
-
-        return json.loads(data)
-
-    # Cache miss
-    cache_misses += 1
-
-    print(f"CACHE MISS: {key}")
-
-    return None
-
-
-# -----------------------------
-# Store data in Redis
-# -----------------------------
-
-def set_cache(key, value, ttl=60):
-
-    redis_client.set(
-        key,
-        json.dumps(value),
-        ex=ttl
-    )
-
-    print(f"Stored {key} in cache for {ttl} seconds")
-
-
-# -----------------------------
-# Invalidate cache
-# -----------------------------
-
-def delete_cache(key):
-
-    redis_client.delete(key)
-
-    # Reset hot-key counter after invalidation
-    if key in key_access_count:
-        del key_access_count[key]
-
-    print(f"Cache invalidated: {key}")
-
-
-# -----------------------------
-# Cache Metrics
-# -----------------------------
-
-def get_metrics():
-
-    total_requests = cache_hits + cache_misses
-
-    if total_requests > 0:
-
-        hit_ratio = (cache_hits / total_requests) * 100
-        miss_ratio = (cache_misses / total_requests) * 100
-
-    else:
-
-        hit_ratio = 0
-        miss_ratio = 0
-
-    if cache_requests > 0:
+        miss_ratio = (
+            (self.cache_misses / total) * 100
+            if total > 0
+            else 0
+        )
 
         average_latency = (
-            total_cache_latency / cache_requests
+            self.total_latency / self.cache_requests
+            if self.cache_requests > 0
+            else 0
         )
 
-    else:
-
-        average_latency = 0
-
-    return {
-        "cache_hits": cache_hits,
-        "cache_misses": cache_misses,
-        "hit_ratio": round(hit_ratio, 2),
-        "miss_ratio": round(miss_ratio, 2),
-        "db_queries_avoided": db_queries_avoided,
-        "average_cache_latency_ms": round(
-            average_latency, 2
-        )
-    }
+        return {
+            "cache_hits": self.cache_hits,
+            "cache_misses": self.cache_misses,
+            "hit_ratio": round(hit_ratio, 2),
+            "miss_ratio": round(miss_ratio, 2),
+            "db_queries_avoided": self.db_queries_avoided,
+            "average_cache_latency_ms": round(average_latency, 2),
+        }
