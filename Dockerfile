@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Application code
 COPY packages ./packages
-COPY services/shard-router ./services/shard-router
+COPY services ./services
 COPY apps ./apps
 COPY scripts ./scripts
 COPY migrations ./migrations

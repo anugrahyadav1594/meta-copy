@@ -62,9 +62,18 @@ class Settings(BaseSettings):
     hot_shard_min_requests: int = 100
     hot_shard_relative_ratio: float = 1.8
 
-    # ---- future services (NOT consumed yet — placeholders) --------------
+    # ---- cache (Member 6) ------------------------------------------------
+    # When false, no Redis connection is attempted at all. When true the
+    # platform connects to redis_url; if Redis cannot be reached it fails
+    # open (cache bypassed) rather than breaking the PostgreSQL path.
+    cache_enabled: bool = False
     redis_url: str = "redis://redis:6379/0"
     cache_default_ttl: int = 60
+    cache_hot_key_threshold: int = 5
+    cache_connect_timeout: float = 2.0
+    cache_fail_open: bool = True
+
+    # ---- future services (NOT consumed yet — placeholders) --------------
     rabbitmq_url: str = "amqp://guest:guest@rabbitmq:5672//"
     opensearch_url: str = "http://opensearch:9200"
     minio_endpoint: str = "minio:9000"

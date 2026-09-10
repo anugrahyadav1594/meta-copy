@@ -3,10 +3,11 @@
 #   docker compose up postgres           # canonical DB only (NORMALIZED dev)
 #   docker compose up                    # canonical DB + API
 #   docker compose --profile sharding up # + 4 (plus a spare) independent shards
-#   docker compose --profile cache up    # future Member 6 placeholder
+#   docker compose --profile cache -f docker-compose.yml \
+#       -f docker-compose.cache.yml up   # + Redis cache (Member 6)
 #
-# Profiles let members start only what they need. The API adapts via MODE and
-# SHARDING_ENABLED (see .env.example).
+# Profiles let members start only what they need. The API adapts via MODE,
+# SHARDING_ENABLED and CACHE_ENABLED (see .env.example).
 
 x-pg-env: &pg-env
   POSTGRES_USER: metascale
@@ -105,7 +106,14 @@ services:
       SHARD_2_URL: postgresql+psycopg://metascale:metascale@postgres-shard-2:5432/metascale
       SHARD_3_URL: postgresql+psycopg://metascale:metascale@postgres-shard-3:5432/metascale
       SHARD_4_URL: postgresql+psycopg://metascale:metascale@postgres-shard-4:5432/metascale
+      # ---- Redis cache (Member 6) ---------------------------------------
+      # CACHE_ENABLED defaults to false so the base stack runs with no Redis.
+      # The cache override file (docker-compose.cache.yml) flips it to true
+      # and orders the API to start after Redis is healthy.
+      CACHE_ENABLED: ${CACHE_ENABLED:-false}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CACHE_DEFAULT_TTL: ${CACHE_DEFAULT_TTL:-60}
+      CACHE_HOT_KEY_THRESHOLD: ${CACHE_HOT_KEY_THRESHOLD:-5}
     ports:
       - "8000:8000"
     depends_on:
@@ -123,12 +131,26 @@ services:
       timeout: 5s
       retries: 6
 
-  # ========================================================= future placeholders
+  # ============================================== distributed cache (Member 6)
+  # Rebuildable, TTL-bound cache-aside over PostgreSQL. Started only with the
+  # `cache` profile (see docker-compose.cache.yml for API wiring). The named
+  # volume holds AOF/RDB warm-restart data and is disposable: losing it only
+  # causes cache misses, never data loss (PostgreSQL is the source of truth).
   redis:
     image: redis:7-alpine
     profiles: ["cache"]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     ports:
       - "6379:6379"
+    volumes:
+      - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_cache_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 3s
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -180,3 +202,4 @@ volumes:
   pg_shard2_data:
   pg_shard3_data:
   pg_shard4_data:
+  redis_cache_data:

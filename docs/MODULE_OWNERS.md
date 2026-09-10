@@ -11,7 +11,7 @@ foundation rather than fork the schema or bypass the repository/router seams.
 | 3 | Denormalization | denormalized read-model projections (future `ReadModelProjector`), consumes domain events | canonical writes, shard routing |
 | **4 (implemented here)** | **Sharding (ShardRouter)** | shard-key mapping, consistent-hash ring + vnodes, shard registry, per-shard connection pools, targeted/scatter/cross-shard queries, hot-shard detection, rebalancing, sharding benchmarks | replication selection, caching, search/feed/graph/media logic |
 | 5 | Replication | primary/replica endpoints, replica lag, failover by replacing `ShardConnectionProvider` | choosing the shard (that is Member 4), ring topology |
-| 6 | Redis caching | cache-aside wrapper above repositories, invalidation, TTL, cache metrics | repository internals and the shard router (must stay cache-unaware) |
+| **6 (implemented here)** | **Redis caching** | async cache-aside wrapper above repositories (`services/cache`), TTL, write invalidation, cache metrics, hot-key detection, fail-open, Docker Redis profile | repository internals and the shard router (must stay cache-unaware) |
 | 7+ | Feeds / TAO-inspired graph / Haystack-inspired media / search / observability | projections consuming events or repository reads; `MetricsSink` export | canonical schema as source of truth |
 
 The cardinal boundary: **Member 4 chooses the shard; Member 5 chooses the

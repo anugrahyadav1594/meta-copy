@@ -1,0 +1,22 @@
+# Cache overlay for Member 6 (distributed Redis cache-aside).
+#
+# Usage:
+#   docker compose --profile cache \
+#       -f docker-compose.yml -f docker-compose.cache.yml up --build
+# or simply:  make dev-cache
+#
+# This overlay:
+#   * enables the cache in the API (CACHE_ENABLED=true)
+#   * makes the API wait for the Redis healthcheck before starting
+#
+# Without it, `docker compose up` runs the exact Member 1-4 stack with no
+# Redis dependency at all.
+services:
+  api:
+    environment:
+      CACHE_ENABLED: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

@@ -35,6 +35,8 @@ from metrics.collector import MetricsCollector
 from rebalance.migrator import RebalanceMigrator
 from router.shard_router import ShardRouter
 
+from services.cache.cache import CacheProvider
+
 
 @dataclass
 class Platform:
@@ -45,6 +47,9 @@ class Platform:
     user_repo: object = None
     post_repo: object = None
     comment_repo: object = None
+    # Redis cache-aside (Member 6); None when caching is disabled or Redis
+    # failed startup and the system failed open.
+    cache: CacheProvider | None = None
     # sharding components
     registry: InMemoryShardRegistry | None = None
     router: ShardRouter | None = None
@@ -63,6 +68,19 @@ class Platform:
     async def start(self) -> None:
         if self.started:
             return
+
+        # Redis cache-aside (Member 6). Only attempted when CACHE_ENABLED;
+        # fails open to None if Redis cannot be reached, so PostgreSQL always
+        # keeps serving.
+        if self.settings.cache_enabled:
+            self.cache = await CacheProvider.create(
+                self.settings.redis_url,
+                default_ttl=self.settings.cache_default_ttl,
+                hot_key_threshold=self.settings.cache_hot_key_threshold,
+                connect_timeout=self.settings.cache_connect_timeout,
+                fail_open=self.settings.cache_fail_open,
+            )
+
         engine = make_engine(self.settings.database_url, self.settings)
         self.canonical_engine = engine
 
@@ -129,6 +147,9 @@ class Platform:
             pass
 
     async def shutdown(self) -> None:
+        if self.cache is not None:
+            await self.cache.aclose()
+            self.cache = None
         if self.shard_manager is not None:
             await self.shard_manager.dispose()
         if self.canonical_engine is not None:

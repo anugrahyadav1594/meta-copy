@@ -27,11 +27,13 @@ make seed-small
 make sharding           # 4 active + 1 spare independent shard containers + API
 make shard-init         # create schema on shards, regenerate shard DDL
 make shard-seed         # seed shards through the router
+make cache              # PostgreSQL + Redis cache + API (Member 6)
 make down               # stop; `make reset` also removes volumes
 
 # No Docker (embedded PostgreSQL)
 python scripts/dev_server.py --sharded --seed small --sharded-seed --reset
 python scripts/dev_server.py                       # NORMALIZED
+make dev-cache          # NORMALIZED + memory:// fakeredis cache (dev/test only)
 ```
 
 API: http://localhost:8000/docs.
@@ -102,10 +104,15 @@ are never hard-coded; `.env` is git-ignored.
 ## Compose profiles
 
 `postgres`/`api` start by default; the shards sit behind the `sharding`
-profile. Future services are individually profiled: `cache` (redis),
-`messaging` (rabbitmq), `search` (opensearch), `storage` (minio),
-`observability` (prometheus, grafana). Example:
-`docker compose --profile sharding up`.
+profile. The `cache` profile (Member 6, Redis) is IMPLEMENTED and is enabled
+together with its overlay via `make cache` (compose
+`docker-compose.cache.yml`, which sets `CACHE_ENABLED=true` and waits for the
+Redis healthcheck). The remaining services are individually profiled
+placeholders: `messaging` (rabbitmq), `search` (opensearch), `storage`
+(minio), `observability` (prometheus, grafana). Examples:
+`docker compose --profile sharding up`,
+`docker compose --profile cache -f docker-compose.yml -f docker-compose.cache.yml up`.
+See [CACHE.md](CACHE.md) for the cache design and endpoints.
 
 ## Troubleshooting
 

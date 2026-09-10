@@ -109,6 +109,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     # -------------------------------------------------------------- routes
+    from api.routes.cache import router as cache_router
     from api.routes.health import router as health_router
     from api.routes.posts import router as posts_router
     from api.routes.shards import router as shards_router
@@ -117,6 +118,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(users_router, prefix=settings.api_v1_prefix)
     app.include_router(posts_router, prefix=settings.api_v1_prefix)
+    app.include_router(cache_router, prefix=settings.api_v1_prefix)
     app.include_router(shards_router, prefix=settings.api_v1_prefix)
 
     @app.get("/", include_in_schema=False)

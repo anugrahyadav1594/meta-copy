@@ -6,7 +6,7 @@ COMPOSE := docker compose
 export PYTHONPATH := $(PWD)/packages:$(PWD)/services/shard-router:$(PWD)/apps:$(PWD)
 export DOCKER_BUILDKIT := 1
 
-.PHONY: help install up down reset sharding seed seed-small seed-medium seed-large \
+.PHONY: help install up down reset sharding cache dev-cache seed seed-small seed-medium seed-large \
         shard-seed shard-init api test test-unit test-integration lint format \
         benchmark benchmark-routing benchmark-db health migrate logs
 
@@ -24,6 +24,12 @@ up:  ## Start canonical PostgreSQL + API (NORMALIZED mode)
 
 sharding:  ## Start 4 (+1 spare) independent PostgreSQL shards + API (SHARDED)
 	SHARDING_ENABLED=true MODE=SHARDED $(COMPOSE) --profile sharding up -d
+
+cache:  ## Start canonical PostgreSQL + Redis cache + API (cache enabled)
+	$(COMPOSE) --profile cache -f docker-compose.yml -f docker-compose.cache.yml up -d --build
+
+dev-cache:  ## No-Docker: embedded PostgreSQL + in-memory (fakeredis) cache
+	CACHE_ENABLED=true REDIS_URL=memory:// $(PYTHON) scripts/dev_server.py --reset --seed small --port 8000
 
 down:  ## Stop containers (keeps data volumes)
 	$(COMPOSE) down
@@ -80,7 +86,7 @@ health:  ## Probe /health and /ready
 
 # ---------------------------------------------------------------------- tests
 test:  ## Full test suite (starts embedded PostgreSQL 16 clusters if available)
-	$(PYTHON) -m pytest tests services/shard-router/tests
+	$(PYTHON) -m pytest tests services/shard-router/tests services/cache/tests
 
 test-unit:
 	$(PYTHON) -m pytest tests/unit services/shard-router/tests -q

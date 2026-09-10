@@ -1,8 +1,13 @@
-"""Post/comment endpoints (mode-aware: canonical or sharded repository)."""
+"""Post/comment endpoints (mode-aware: canonical or sharded repository).
+
+The single-post read transparently uses Redis cache-aside when enabled and
+reports whether the response was a cache ``HIT``, ``MISS`` (filled from the
+database), or ``BYPASS`` (caching disabled) via the ``X-Cache`` header.
+"""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from schemas.post import CommentCreate, CommentRead, PostCreate, PostRead, PostUpdate
 
 from api.dependencies import Platform, get_platform
@@ -12,7 +17,12 @@ router = APIRouter(prefix="/posts", tags=["posts"])
 
 
 def service(platform: Platform = Depends(get_platform)) -> PostService:
-    return PostService(platform.post_repo, platform.comment_repo, platform.user_repo)
+    return PostService(
+        platform.post_repo,
+        platform.comment_repo,
+        platform.user_repo,
+        platform.cache,
+    )
 
 
 @router.post("", response_model=PostRead, status_code=status.HTTP_201_CREATED)
@@ -28,8 +38,14 @@ async def recent_posts(
 
 
 @router.get("/{post_id}", response_model=PostRead)
-async def get_post(post_id: int, svc: PostService = Depends(service)) -> object:
-    return await svc.get(post_id)
+async def get_post(
+    post_id: int,
+    response: Response,
+    svc: PostService = Depends(service),
+) -> object:
+    post, source = await svc.get(post_id)
+    response.headers["X-Cache"] = source.upper()
+    return post
 
 
 @router.patch("/{post_id}", response_model=PostRead)

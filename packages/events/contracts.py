@@ -79,7 +79,14 @@ class NotConfiguredEventBus:
 
 
 class CacheProvider(abc.ABC):
-    """Future Redis cache-aside contract (NOT IMPLEMENTED)."""
+    """Redis cache-aside contract.
+
+    IMPLEMENTED by Member 6 in ``services/cache/cache.py`` (async
+    redis.asyncio client, JSON values instead of raw bytes, TTLs,
+    invalidation and fail-open). The concrete provider is structurally
+    compatible (async ``get`` / ``set`` / ``invalidate``) and composed in
+    the API layer; repositories and the shard router stay unaware of it.
+    """
 
     @abc.abstractmethod
     async def get(self, key: str) -> bytes | None:
