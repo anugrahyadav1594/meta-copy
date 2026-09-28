@@ -251,7 +251,7 @@ class Demo:
         time.sleep(self.pause)
 
         # 13 ------------------------------------------------------------------
-        self.title("Follows: the social graph is derived from the follows table")
+        self.title("Follow relationships: plain canonical rows (no separate graph store)")
         cara = self.call(
             "POST",
             "/api/v1/users",
@@ -280,23 +280,19 @@ class Demo:
         time.sleep(self.pause)
 
         # 14 ------------------------------------------------------------------
-        self.title("Graph queries (Member 9) — adjacency rebuilt from PostgreSQL")
+        self.title("Follow queries: PostgreSQL is the only source of truth")
         self.show(
             "alice followers",
-            self.call("GET", f"/api/v1/graph/users/{self.ids['alice']}/followers"),
+            self.call("GET", f"/api/v1/users/{self.ids['alice']}/followers"),
         )
         self.show(
             "bob following",
-            self.call("GET", f"/api/v1/graph/users/{self.ids['bob']}/following"),
+            self.call("GET", f"/api/v1/users/{self.ids['bob']}/following"),
         )
-        self.show(
-            "bob/cara mutuals",
-            self.call(
-                "GET",
-                f"/api/v1/graph/users/{self.ids['bob']}/mutuals/{self.ids['cara']}",
-            ),
+        self.note(
+            "there is no separate graph store: Member 9's graph module is excluded "
+            "from this iteration, so relationships are read from the follows table"
         )
-        self.show("graph stats", self.call("GET", "/api/v1/graph/stats"))
         time.sleep(self.pause)
 
         # 15 ------------------------------------------------------------------

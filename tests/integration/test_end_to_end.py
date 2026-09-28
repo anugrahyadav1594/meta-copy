@@ -6,7 +6,7 @@ derived systems enabled::
 
     create user -> create post -> route post -> retrieve post (cache MISS/HIT)
       -> create comment -> create like -> generate feed -> search post
-      -> retrieve graph relationship -> inspect metrics
+#      -> read follow relationships -> inspect metrics
 
 The sharded path is exercised: users are created through the shard router and
 looked up again by id on the shard that owns them.
@@ -87,7 +87,7 @@ async def test_end_to_end_full_flow(app_and_settings) -> None:
         assert routed["shard_id"].startswith("shard-")
         assert routed["strategy"] == "consistent_hash"
 
-        # ------------------------------------------------ 3. follows (graph)
+        # ------------------------------------------------ 3. follows
         assert (
             await client.post(f"/api/v1/users/{bob}/follow", json={"following_id": alice})
         ).status_code == 201
@@ -153,13 +153,13 @@ async def test_end_to_end_full_flow(app_and_settings) -> None:
         # results refer back to canonical ids, never index-local ones
         assert all(p["entity"] == "post" for p in found["posts"])
 
-        # ------------------------------------------------------- 10. graph
-        followers = (await client.get(f"/api/v1/graph/users/{alice}/followers")).json()
-        assert set(followers["user_ids"]) == {bob, cara}
-        following = (await client.get(f"/api/v1/graph/users/{bob}/following")).json()
-        assert following["user_ids"] == [alice]
-        mutuals = (await client.get(f"/api/v1/graph/users/{bob}/mutuals/{cara}")).json()
-        assert mutuals["user_ids"] == [alice]
+        # ----------------------------- 10. follow relationships (canonical rows)
+        # No separate graph store: Member 9's graph module is excluded from this
+        # iteration, so relationships are read straight from the follows table.
+        followers = (await client.get(f"/api/v1/users/{alice}/followers")).json()
+        assert {f["follower_id"] for f in followers} == {bob, cara}
+        following = (await client.get(f"/api/v1/users/{bob}/following")).json()
+        assert [f["following_id"] for f in following] == [alice]
 
         # ------------------------------------------------------- 11. media
         upload = await client.post(

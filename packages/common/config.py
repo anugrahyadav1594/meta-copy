@@ -133,7 +133,10 @@ class Settings(BaseSettings):
     # ---- graph (Member 9) -------------------------------------------------
     # TAO-inspired adjacency cache: a DERIVED projection rebuilt from the
     # canonical follows table. Never a source of truth.
-    graph_projection_enabled: bool = True
+    # Member 9 / graph is EXCLUDED from this iteration (legacy/member9-graph/).
+    # These knobs are kept so the exclusion is visible in configuration too;
+    # nothing in the running system reads them.
+    graph_projection_enabled: bool = False
     graph_projection_ttl: int = 30
 
     # ---- search (Member 10) -----------------------------------------------

@@ -1,7 +1,7 @@
 """Integration tests for the derived systems against real PostgreSQL.
 
 Members 3 (denormalized read model), 7 (feed fan-out), 8 (media metadata),
-9 (social graph), 10 (search index). Each test proves the same two things:
+10 (search index). Each test proves the same two things:
 
 1. the projection is produced from canonical data (or domain events), and
 2. it can be REBUILT from PostgreSQL — so it is never a second source of
@@ -228,35 +228,38 @@ async def test_feed_fan_out_is_derived_and_rebuildable(app_and_urls) -> None:
 
 
 @pytest.mark.asyncio
-async def test_graph_is_rebuilt_from_follows_only(app_and_urls) -> None:
-    app, settings, _urls, platform = app_and_urls
+async def test_follow_relationships_are_read_from_canonical_rows(app_and_urls) -> None:
+    """Follow state is plain canonical data — no separate graph store.
+
+    Member 9's graph module is EXCLUDED from this iteration (see
+    legacy/member9-graph/), so relationships are read straight from the
+    `follows` table through the ordinary user endpoints.
+    """
+    app, settings, _urls, _platform = app_and_urls
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        alice = await _make_user(client, "gr_alice")
-        bob = await _make_user(client, "gr_bob")
-        cara = await _make_user(client, "gr_cara")
+        alice = await _make_user(client, "fo_alice")
+        bob = await _make_user(client, "fo_bob")
+        cara = await _make_user(client, "fo_cara")
         await client.post(f"/api/v1/users/{bob}/follow", json={"following_id": alice})
         await client.post(f"/api/v1/users/{cara}/follow", json={"following_id": alice})
         await client.post(f"/api/v1/users/{alice}/follow", json={"following_id": bob})
 
-        followers = (await client.get(f"/api/v1/graph/users/{alice}/followers")).json()
-        assert sorted(followers["user_ids"]) == sorted([bob, cara])
-        following = (await client.get(f"/api/v1/graph/users/{alice}/following")).json()
-        assert following["user_ids"] == [bob]
-        mutuals = (await client.get(f"/api/v1/graph/users/{bob}/mutuals/{cara}")).json()
-        assert mutuals["user_ids"] == [alice]
+        followers = (await client.get(f"/api/v1/users/{alice}/followers")).json()
+        assert sorted(f["follower_id"] for f in followers) == sorted([bob, cara])
+        following = (await client.get(f"/api/v1/users/{alice}/following")).json()
+        assert [f["following_id"] for f in following] == [bob]
 
-        # the graph is a projection: SQLite is NOT involved anywhere
-        stats = (await client.get("/api/v1/graph/stats")).json()
-        assert stats["derived_projection"] is True
-        assert stats["source_of_truth"] == "postgresql:follows"
+        # following the same user twice is idempotent
+        again = await client.post(f"/api/v1/users/{bob}/follow", json={"following_id": alice})
+        assert again.status_code == 201
+        assert again.json()["created"] is False
 
-        # rebuild and re-read: identical answer
-        await client.post("/api/v1/graph/rebuild")
-        again = (await client.get(f"/api/v1/graph/users/{alice}/followers")).json()
-        assert again["user_ids"] == followers["user_ids"]
+        # unfollow removes exactly one edge
+        await client.delete(f"/api/v1/users/{cara}/follow/{alice}")
+        followers = (await client.get(f"/api/v1/users/{alice}/followers")).json()
+        assert [f["follower_id"] for f in followers] == [bob]
 
-    assert platform.graph is not None
-    assert settings.media_backend == "local"
+    assert settings.mode == "FULL_DISTRIBUTED"
 
 
 @pytest.mark.asyncio

@@ -81,7 +81,7 @@ async def unfollow_user(
     await svc.unfollow(user_id, following_id)
 
 
-@router.get("/{user_id}/following")
+@router.get("/{user_id}/following", response_model=list[FollowerRead])
 async def following(
     user_id: int,
     limit: int = Query(default=50, ge=1, le=200),

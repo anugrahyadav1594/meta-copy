@@ -30,7 +30,6 @@ TAGS = [
     {"name": "cache", "description": "Redis cache-aside status and metrics (Member 6)"},
     {"name": "feed", "description": "Feed generation over canonical relationships (Member 7)"},
     {"name": "media", "description": "Media metadata + blob storage (Member 8)"},
-    {"name": "graph", "description": "TAO-inspired social graph projection (Member 9)"},
     {"name": "search", "description": "Derived search index and autocomplete (Member 10)"},
     {"name": "observability", "description": "Prometheus metrics and measured latency (Member 11)"},
     {"name": "demo", "description": "Educational/demo-only endpoints (clearly labelled)"},
@@ -67,7 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "Educational distributed social-media database. Canonical "
             "normalized PostgreSQL is the source of truth; sharding (M4), "
             "replication (M5), Redis cache-aside (M6), denormalized read "
-            "model (M3), feed (M7), media (M8), TAO-inspired graph (M9), "
+            "model (M3), feed (M7), media (M8), "
             "search (M10) and observability (M11) are composed around it. "
             "Meta-inspired; not affiliated with Meta/Facebook/Instagram."
         ),
@@ -133,7 +132,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # -------------------------------------------------------------- routes
     from api.routes.cache import router as cache_router
     from api.routes.feed import router as feed_router
-    from api.routes.graph import router as graph_router
     from api.routes.health import router as health_router
     from api.routes.media import router as media_router
     from api.routes.metrics import prometheus_router
@@ -154,7 +152,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(feed_router, prefix=settings.api_v1_prefix)
     app.include_router(read_model_router, prefix=settings.api_v1_prefix)
     app.include_router(media_router, prefix=settings.api_v1_prefix)
-    app.include_router(graph_router, prefix=settings.api_v1_prefix)
     app.include_router(search_router, prefix=settings.api_v1_prefix)
     app.include_router(cache_router, prefix=settings.api_v1_prefix)
     app.include_router(shards_router, prefix=settings.api_v1_prefix)

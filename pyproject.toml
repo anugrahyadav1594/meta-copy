@@ -43,17 +43,20 @@ include = [
     "router*", "metadata*", "health*", "queries*", "rebalance*", "hotspots*", "metrics*",
     "api*",
     "services*",
-    "denormalization*", "feed*", "media*", "graph*", "search*", "replication*", "observability*",
+    "denormalization*", "feed*", "media*", "search*", "replication*", "observability*",
 ]
 
 [tool.black]
 line-length = 100
 target-version = ["py311"]
+# legacy/ holds excluded member code kept for reference only: it is not
+# importable, not executed and must not be reformatted (it is verbatim).
+extend-exclude = "legacy/"
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["migrations", ".venv"]
+extend-exclude = ["migrations", ".venv", "legacy"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]

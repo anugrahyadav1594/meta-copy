@@ -49,7 +49,6 @@ from router.shard_router import ShardRouter
 from services.cache.cache import CacheProvider
 from services.denormalization.projector import DenormalizedFeedProjector
 from services.feed.service import FeedProjector, FeedService
-from services.graph.service import SocialGraph
 from services.media.blobstore import build_blob_store
 from services.media.service import MediaService
 from services.replication.provider import ReplicationAwareProvider
@@ -78,7 +77,6 @@ class Platform:
     feed_service: object = None
     feed_projector: object = None
     media_service: object = None
-    graph: object = None
     search_indexer: object = None
     replication: object = None
     # Redis cache-aside (Member 6); None when caching is disabled or Redis
@@ -210,12 +208,6 @@ class Platform:
             build_blob_store(s),
             self.event_bus,
             max_upload_mb=s.media_max_upload_mb,
-        )
-
-        # --- TAO-inspired graph (Member 9): derived adjacency over follows
-        self.graph = SocialGraph(
-            self.follow_repo,
-            cache_ttl_seconds=s.graph_projection_ttl if s.graph_projection_enabled else 0,
         )
 
         # --- search (Member 10): inverted index built from canonical data
