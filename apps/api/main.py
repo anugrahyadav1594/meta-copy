@@ -31,6 +31,9 @@ TAGS = [
     {"name": "feed", "description": "Feed generation over canonical relationships (Member 7)"},
     {"name": "media", "description": "Media metadata + blob storage (Member 8)"},
     {"name": "search", "description": "Derived search index and autocomplete (Member 10)"},
+    {"name": "database", "description": "Live schema, rows and change stream (DB Explorer)"},
+    {"name": "events", "description": "Domain event bus: transports, types, recent events"},
+    {"name": "benchmarks", "description": "Measurements taken live against the running system"},
     {"name": "observability", "description": "Prometheus metrics and measured latency (Member 11)"},
     {"name": "demo", "description": "Educational/demo-only endpoints (clearly labelled)"},
 ]
@@ -130,12 +133,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     # -------------------------------------------------------------- routes
+    from api.routes.benchmarks import router as benchmarks_router
     from api.routes.cache import router as cache_router
+    from api.routes.database import router as database_router
+    from api.routes.events import router as events_router
     from api.routes.feed import router as feed_router
     from api.routes.health import router as health_router
+    from api.routes.health import v1_router as health_v1_router
     from api.routes.media import router as media_router
     from api.routes.metrics import prometheus_router
     from api.routes.metrics import router as metrics_router
+    from api.routes.observability import router as observability_router
     from api.routes.posts import router as posts_router
     from api.routes.read_model import router as read_model_router
     from api.routes.replication import router as replication_router
@@ -156,6 +164,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(cache_router, prefix=settings.api_v1_prefix)
     app.include_router(shards_router, prefix=settings.api_v1_prefix)
     app.include_router(replication_router, prefix=settings.api_v1_prefix)
+    # Integrated-system routes: database explorer + change stream, event bus
+    # introspection, observability surface, live benchmarks.
+    app.include_router(database_router, prefix=settings.api_v1_prefix)
+    app.include_router(events_router, prefix=settings.api_v1_prefix)
+    app.include_router(observability_router, prefix=settings.api_v1_prefix)
+    app.include_router(benchmarks_router, prefix=settings.api_v1_prefix)
+    # GET /api/v1/health — aggregate dependency health (healthy|degraded|unavailable)
+    app.include_router(health_v1_router)
 
     @app.get("/", include_in_schema=False)
     async def root() -> dict[str, str]:
@@ -167,6 +183,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "metrics": "/metrics",
             "health": "/health",
             "ready": "/ready",
+            "api_health": f"{settings.api_v1_prefix}/health",
         }
 
     return app

@@ -43,6 +43,7 @@ from hotspots.detector import HotShardDetector
 from metadata.models import ShardMetadata
 from metadata.registry import InMemoryShardRegistry
 from metrics.collector import MetricsCollector
+from observability.change_log import ChangeLog, TrackedRepository
 from rebalance.migrator import RebalanceMigrator
 from router.shard_router import ShardRouter
 
@@ -99,6 +100,8 @@ class Platform:
     sharded_notification_repo: ShardedNotificationRepository | None = None
     sharded_hashtag_repo: ShardedHashtagRepository | None = None
     audit: object = None
+    # Database change stream (every canonical write, for the DB Explorer UI).
+    change_log: ChangeLog | None = None
     started: bool = False
 
     # ------------------------------------------------------------------ build
@@ -125,6 +128,12 @@ class Platform:
                 fail_open=self.settings.cache_fail_open,
             )
 
+        # Change stream: bounded in-process ring buffer, enabled by default
+        # (CHANGES_ENABLED=false turns it off; it costs one serialized row per
+        # write).
+        if self.change_log is None and self.settings.changes_enabled:
+            self.change_log = ChangeLog(capacity=self.settings.change_log_capacity)
+
         engine = make_engine(self.settings.database_url, self.settings)
         self.canonical_engine = engine
 
@@ -144,7 +153,37 @@ class Platform:
             self._build_canonical_repos(engine)
 
         await self._build_derived_systems()
+        # Wrap the canonical repositories LAST: derived systems keep raw
+        # repositories (their writes are projections, not canonical facts),
+        # while every API-originated write is recorded in the change stream.
+        self._track_changes()
         self.started = True
+
+    # ------------------------------------------------------- change tracking
+    def _track_changes(self) -> None:
+        """Wrap canonical repositories so writes emit ChangeRecords."""
+        if self.change_log is None:
+            return
+        router = self.router
+        for attr, table in (
+            ("user_repo", "users"),
+            ("post_repo", "posts"),
+            ("comment_repo", "comments"),
+            ("like_repo", "likes"),
+            ("follow_repo", "follows"),
+            ("media_repo", "media"),
+            ("notification_repo", "notifications"),
+        ):
+            repo = getattr(self, attr, None)
+            if repo is None or isinstance(repo, TrackedRepository):
+                continue
+            setattr(
+                self,
+                attr,
+                TrackedRepository(
+                    repo, table, self.change_log, router=router, service="api", entity=table
+                ),
+            )
 
     def _build_canonical_repos(self, engine: object) -> None:
         self.user_repo = CanonicalUserRepository(engine)  # type: ignore[arg-type]
@@ -294,6 +333,8 @@ class Platform:
         if self.canonical_engine is not None:
             await self.canonical_engine.dispose()
         self.canonical_engine = None
+        if self.change_log is not None:
+            self.change_log.clear()
         self.started = False
 
     def require_sharding(self) -> None:

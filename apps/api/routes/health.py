@@ -26,6 +26,9 @@ from api.dependencies import Platform, get_platform
 
 router = APIRouter(tags=["system"])
 
+# Versioned alias required by the integrated API contract: GET /api/v1/health.
+v1_router = APIRouter(prefix="/api/v1", tags=["system"])
+
 _START = time.monotonic()
 PROBE_TIMEOUT = 2.0
 
@@ -167,3 +170,180 @@ async def ready(platform: Platform = Depends(get_platform)) -> dict[str, object]
         },
         "checks": checks,
     }
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/health — aggregate status across every declared dependency.
+#
+# Vocabulary is exactly ``healthy`` | ``degraded`` | ``unavailable``:
+#   * required components (API process, canonical PostgreSQL, configured
+#     shards) failing makes the whole system ``unavailable``
+#   * optional, fail-open components (Redis, RabbitMQ, OpenSearch, MinIO,
+#     replicas) that are enabled but unreachable make it ``degraded``
+#   * optional components that were never configured are reported
+#     ``unavailable`` with ``required: false`` and a ``detail`` explaining it —
+#     they are not counted as degradation because the system is designed to run
+#     without them.
+# ---------------------------------------------------------------------------
+
+
+async def aggregate_health(platform: Platform) -> dict[str, object]:
+    """Probe every dependency and classify each one. Never raises."""
+    components: dict[str, Any] = {}
+    required: list[str] = ["api", "postgresql"]
+
+    components["api"] = {"status": "healthy", "required": True, "detail": "request served"}
+
+    # ------------------------------------------------- required: PostgreSQL
+    try:
+        async with platform.canonical_engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        components["postgresql"] = {
+            "status": "healthy",
+            "required": True,
+            "detail": "canonical database reachable",
+        }
+    except Exception as exc:  # noqa: BLE001 - health must never 500
+        components["postgresql"] = {
+            "status": "unavailable",
+            "required": True,
+            "detail": f"{type(exc).__name__}",
+        }
+
+    # ---------------------------------------------- required when configured
+    if platform.sharding_available and platform.health_checker is not None:
+        required.append("shards")
+        probes = await platform.health_checker.check_all()
+        per_shard = {
+            p.shard_id: {
+                "status": "healthy" if p.reachable else "unavailable",
+                "latency_ms": round(p.latency_ms, 3) if p.latency_ms is not None else None,
+                "detail": None if p.reachable else (p.error or "unreachable"),
+            }
+            for p in probes
+        }
+        down = [s for s in per_shard if per_shard[s]["status"] != "healthy"]
+        components["shards"] = {
+            "status": "unavailable" if down else "healthy",
+            "required": True,
+            "count": len(probes),
+            "unavailable": down,
+            "per_shard": per_shard,
+        }
+
+    # ------------------------------------------------- optional, fail-open
+    async def classify(name: str, probe: Any) -> None:
+        """Run a probe coroutine and map the result onto the vocabulary."""
+        try:
+            value = await probe()
+        except Exception as exc:  # noqa: BLE001
+            components[name] = {
+                "status": "unavailable",
+                "required": False,
+                "detail": f"probe error: {type(exc).__name__}",
+            }
+            return
+        if value is None:  # not configured in this deployment
+            components[name] = {
+                "status": "unavailable",
+                "required": False,
+                "detail": "not configured",
+            }
+        elif value is True:
+            components[name] = {"status": "healthy", "required": False, "detail": "reachable"}
+        else:
+            components[name] = {
+                "status": "degraded",
+                "required": False,
+                "detail": str(value),
+            }
+
+    async def _redis() -> Any:
+        if platform.cache is None:
+            return None
+        return bool(await asyncio.wait_for(platform.cache.ping(), timeout=PROBE_TIMEOUT))
+
+    async def _rabbitmq() -> Any:
+        transport = (platform.settings.event_bus or "memory").lower()
+        if transport != "rabbitmq":
+            return None
+        return (await _probe_rabbitmq(platform)) == "ready"
+
+    async def _opensearch() -> Any:
+        provider = getattr(platform.search_indexer, "provider", None)
+        available = getattr(provider, "available", None)
+        if provider is None or available is None:
+            return None
+        return bool(await asyncio.wait_for(available(), timeout=PROBE_TIMEOUT))
+
+    async def _minio() -> Any:
+        store = getattr(platform.media_service, "blobs", None) if platform.media_service else None
+        if store is None or getattr(store, "backend", "local") != "minio":
+            return None
+        import httpx
+
+        endpoint = getattr(store, "endpoint", "")
+        scheme = "https" if getattr(store, "secure", False) else "http"
+        async with httpx.AsyncClient(timeout=PROBE_TIMEOUT) as client:
+            response = await client.get(f"{scheme}://{endpoint}/minio/health/live")
+        return response.status_code == 200
+
+    async def _replication() -> Any:
+        if platform.replication is None:
+            return None
+        status = await platform.replication.status()
+        return {
+            "status": "healthy" if status.get("replication_active") else "unavailable",
+            "required": False,
+            "detail": (
+                "replicas configured"
+                if status.get("replication_active")
+                else "no replicas configured"
+            ),
+            "shards": status.get("shards", []),
+        }
+
+    await classify("redis", _redis)
+    await classify("rabbitmq", _rabbitmq)
+    await classify("opensearch", _opensearch)
+    await classify("minio", _minio)
+
+    if platform.replication is not None:
+        status = await platform.replication.status()
+        components["replication"] = {
+            "status": "healthy" if status.get("replication_active") else "unavailable",
+            "required": False,
+            "detail": (
+                "replica URLs configured"
+                if status.get("replication_active")
+                else "no replica URLs configured — primary-only"
+            ),
+            "per_shard": status.get("shards", []),
+        }
+
+    broken_required = [n for n in required if components.get(n, {}).get("status") != "healthy"]
+    degraded_optional = [
+        n for n, c in components.items() if not c.get("required") and c.get("status") == "degraded"
+    ]
+    if broken_required:
+        overall = "unavailable"
+    elif degraded_optional:
+        overall = "degraded"
+    else:
+        overall = "healthy"
+
+    return {
+        "status": overall,
+        "service": "metascale-api",
+        "mode": platform.settings.mode.value,
+        "required": required,
+        "unavailable_required": broken_required,
+        "degraded_optional": degraded_optional,
+        "components": components,
+    }
+
+
+@v1_router.get("/health")
+async def health_v1(platform: Platform = Depends(get_platform)) -> dict[str, object]:
+    """Aggregate health of API + PostgreSQL + shards + optional backends."""
+    return await aggregate_health(platform)

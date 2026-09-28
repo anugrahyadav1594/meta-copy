@@ -133,6 +133,10 @@ class Settings(BaseSettings):
     # ---- graph (Member 9) -------------------------------------------------
     # TAO-inspired adjacency cache: a DERIVED projection rebuilt from the
     # canonical follows table. Never a source of truth.
+    # Database change tracking (feeds GET /api/v1/database/changes).
+    changes_enabled: bool = True
+    change_log_capacity: int = 1_000
+
     # Member 9 / graph is EXCLUDED from this iteration (legacy/member9-graph/).
     # These knobs are kept so the exclusion is visible in configuration too;
     # nothing in the running system reads them.
