@@ -344,7 +344,9 @@ class Demo:
 
         # 17 ------------------------------------------------------------------
         self.title("Media (Member 8): SHA-256 content addressing, real de-duplication")
-        blob = b"metascale-demo-blob-" + b"x" * 512
+        # unique bytes per run so the first upload really is an upload and the
+        # second one is the de-duplication case
+        blob = f"metascale-demo-blob-{stamp}-".encode() + b"x" * 512
         boundary = "----metascaleDemoBoundary"
 
         def upload(filename: str) -> bytes:

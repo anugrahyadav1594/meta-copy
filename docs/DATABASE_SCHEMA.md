@@ -120,3 +120,32 @@ be stored verbatim in an integration test).
 `metadata/repository.py` optionally creates `shard_registry_state` and
 `shard_migration_log` on the canonical instance for topology and migration
 audit; these are operational tables, not social-domain data.
+
+---
+
+## Derived tables (not part of the 3NF domain schema)
+
+These are **projections**. They can be dropped and rebuilt at any time; no
+request depends on them being correct, and none of them is a source of truth.
+
+| Table | Owned by | Written by | Rebuilt by | Sharded? |
+|---|---|---|---|---|
+| `denormalized_post_feed` | Member 3 | event projector (POST/LIKE/COMMENT events) | `POST /api/v1/read-model/rebuild` | no — always canonical, rebuilt by scattering over the shards |
+| `user_feed` | Member 7 | `FeedProjector` on `POST_CREATED` (push mode only) | `POST /api/v1/feed/rebuild` | no — same reason |
+
+Both are created on demand (`CREATE TABLE IF NOT EXISTS`) by their projector
+at startup; neither appears in `packages/models/` because they are not domain
+entities.
+
+## Shard placement (why the rebuilds scatter)
+
+| Table | Application shard key | Rationale |
+|---|---|---|
+| `users`, `profiles`, `posts`, `media`, `notifications` | `user_id` / `owner_id` | an author's data is read together |
+| `comments`, `likes`, `post_hashtags` | `post_id` | a post's counters and comments are read together |
+| `follows` | `follower_id` | a reader's edge list is read together |
+| `hashtags` | `hashtag_id` | vocabulary lookups are point reads |
+
+Because `posts` and `follows` hash on different columns, a join written
+*inside* one shard is incomplete. Derived rebuilds therefore gather the base
+tables from every shard and join in the application (`packages/db/shard_scan.py`).

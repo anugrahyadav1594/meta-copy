@@ -21,8 +21,9 @@ Common codes: `NOT_FOUND` 404, `VALIDATION_ERROR` 422, `CONFLICT` 409,
 
 | Method | Path | Request | Response | DB / sharding behavior |
 |---|---|---|---|---|
-| GET | `/health` | — | `{status:"healthy"}` | no dependencies |
-| GET | `/ready` | — | `{status, mode, checks:{canonical_postgres, shards?}}` | `SELECT 1` on canonical and (when enabled) every shard |
+| GET | `/health` | — | `{status, service, mode, uptime_seconds}` | liveness only: touches **no** dependency |
+| GET | `/ready` | — | `{status, degraded_optional_dependencies[], mode, derived_systems, checks:{canonical_postgres, shards?, redis, rabbitmq, opensearch, minio, replication}}` | `SELECT 1` on canonical and (when enabled) every shard; optional backends probed with a 2s timeout and reported `disabled` when off |
+| GET | `/metrics` | — | Prometheus text | scrape target, unversioned |
 
 ## Canonical, mode-aware endpoints
 
@@ -108,4 +109,198 @@ curl localhost:8000/api/v1/shards/route/user/101
 curl localhost:8000/api/v1/shards
 curl "localhost:8000/api/v1/sharded/posts?limit=50"
 curl -X POST localhost:8000/api/v1/shards/shard-1/health-check
+```
+
+---
+
+## Integrated system: the other routers
+
+The sections above describe the canonical and shard-admin routers. The
+integrated system adds the routers below. All of them live under `/api/v1`
+and are listed here exactly as the running application reports them.
+
+### Full endpoint catalogue (generated from the running application's OpenAPI)
+
+**system** — 2 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| GET | `/health` | Health |
+| GET | `/ready` | Ready |
+
+**users** — 10 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| DELETE | `/api/v1/users/{user_id}` | Delete User |
+| DELETE | `/api/v1/users/{user_id}/follow/{following_id}` | Unfollow User |
+| GET | `/api/v1/users` | List Users |
+| GET | `/api/v1/users/{user_id}` | Get User |
+| GET | `/api/v1/users/{user_id}/followers` | Followers |
+| GET | `/api/v1/users/{user_id}/following` | Following |
+| GET | `/api/v1/users/{user_id}/notifications` | Notifications |
+| PATCH | `/api/v1/users/{user_id}` | Update User |
+| POST | `/api/v1/users` | Create User |
+| POST | `/api/v1/users/{user_id}/follow` | Follow User |
+
+**posts** — 11 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| DELETE | `/api/v1/posts/{post_id}` | Delete Post |
+| DELETE | `/api/v1/posts/{post_id}/like/{user_id}` | Unlike Post |
+| GET | `/api/v1/posts` | Recent Posts |
+| GET | `/api/v1/posts/{post_id}` | Get Post |
+| GET | `/api/v1/posts/{post_id}/comments` | Comments |
+| GET | `/api/v1/posts/{post_id}/hashtags` | Post Hashtags |
+| GET | `/api/v1/posts/{post_id}/likes` | Post Likes |
+| PATCH | `/api/v1/posts/{post_id}` | Update Post |
+| POST | `/api/v1/posts` | Create Post |
+| POST | `/api/v1/posts/{post_id}/comments` | Add Comment |
+| POST | `/api/v1/posts/{post_id}/like` | Like Post |
+
+**feed** — 4 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| GET | `/api/v1/feed/stats` | Feed Stats |
+| GET | `/api/v1/feed/strategies` | Describe |
+| GET | `/api/v1/users/{user_id}/feed` | Get Feed |
+| POST | `/api/v1/feed/rebuild` | Rebuild Feed |
+
+**graph** — 7 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| GET | `/api/v1/graph/stats` | Graph Stats |
+| GET | `/api/v1/graph/users/{user_id}/degrees` | Degrees |
+| GET | `/api/v1/graph/users/{user_id}/followers` | Followers |
+| GET | `/api/v1/graph/users/{user_id}/following` | Following |
+| GET | `/api/v1/graph/users/{user_id}/mutuals/{other_user_id}` | Mutuals |
+| GET | `/api/v1/graph/users/{user_id}/suggestions` | Suggestions |
+| POST | `/api/v1/graph/rebuild` | Rebuild Projection |
+
+**search** — 4 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| GET | `/api/v1/search` | Search |
+| GET | `/api/v1/search/autocomplete` | Autocomplete |
+| GET | `/api/v1/search/stats` | Search Stats |
+| POST | `/api/v1/search/reindex` | Reindex |
+
+**media** — 5 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| DELETE | `/api/v1/media/{media_id}` | Delete Media |
+| GET | `/api/v1/media/` | List Media |
+| GET | `/api/v1/media/_stats/backend` | Backend Stats |
+| GET | `/api/v1/media/{media_id}` | Download Media |
+| POST | `/api/v1/media/upload` | Upload Media |
+
+**cache** — 4 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| DELETE | `/api/v1/cache/posts/{post_id}` | Invalidate Post |
+| GET | `/api/v1/cache/health` | Cache Health |
+| GET | `/api/v1/cache/keys` | Cache Keys |
+| GET | `/api/v1/cache/metrics` | Cache Metrics |
+
+**denormalization** — 3 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| GET | `/api/v1/read-model/posts` | List Posts |
+| GET | `/api/v1/read-model/stats` | Stats |
+| POST | `/api/v1/read-model/rebuild` | Rebuild |
+
+**replication** — 4 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| GET | `/api/v1/replication/describe` | Describe |
+| GET | `/api/v1/replication/status` | Status |
+| POST | `/api/v1/replication/demo/simulate-failover/{shard_id}` | Simulate Failover |
+| POST | `/api/v1/replication/promote/{shard_id}` | Promote |
+
+**sharding** — 21 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| DELETE | `/api/v1/sharded/posts/{post_id}` | Sharded Delete Post |
+| DELETE | `/api/v1/sharded/users/{user_id}` | Sharded Delete User |
+| GET | `/api/v1/sharded/posts` | Sharded Posts Scatter |
+| GET | `/api/v1/sharded/posts/{post_id}` | Sharded Get Post |
+| GET | `/api/v1/sharded/posts/{post_id}/comments` | Sharded Post Comments |
+| GET | `/api/v1/sharded/posts/{post_id}/cross-shard` | Sharded Cross Shard |
+| GET | `/api/v1/sharded/users/{user_id}` | Sharded Get User |
+| GET | `/api/v1/shards` | List Shards |
+| GET | `/api/v1/shards/distribution` | Shard Distribution |
+| GET | `/api/v1/shards/route/user/{user_id}` | Route User |
+| GET | `/api/v1/shards/route/{key}` | Route Key |
+| GET | `/api/v1/shards/stats` | Shard Stats |
+| GET | `/api/v1/shards/{shard_id}` | Get Shard |
+| PATCH | `/api/v1/sharded/posts/{post_id}` | Sharded Update Post |
+| PATCH | `/api/v1/sharded/users/{user_id}` | Sharded Update User |
+| POST | `/api/v1/sharded/posts` | Sharded Create Post |
+| POST | `/api/v1/sharded/users` | Sharded Create User |
+| POST | `/api/v1/shards/demo/hot-user/{user_id}` | Hot User Demo |
+| POST | `/api/v1/shards/rebalance` | Rebalance |
+| POST | `/api/v1/shards/{shard_id}/health-check` | Health Check |
+| POST | `/api/v1/shards/{shard_id}/simulate-down` | Simulate Down |
+
+**observability** — 2 endpoints
+
+| Method | Path | Summary |
+|---|---|---|
+| GET | `/api/v1/metrics` | Metrics |
+| GET | `/api/v1/metrics/summary` | Metrics Summary |
+
+### Conventions worth knowing
+
+* **`x-cache`** — `GET /api/v1/posts/{id}` answers `MISS` or `HIT`; writes
+  invalidate `post:{id}`.
+* **Derived systems are labelled in their own payloads** —
+  `GET /api/v1/graph/stats` returns `derived_projection: true` and
+  `source_of_truth: "postgresql:follows"`;
+  `POST /api/v1/feed/rebuild` and `/read-model/rebuild` return
+  `derived: true`; `POST /api/v1/search/reindex` returns `derived: true`.
+* **Simulation is never hidden** —
+  `POST /api/v1/replication/demo/simulate-failover/{shard}` returns
+  `{"simulated": true, ...}`; real promotion is
+  `POST /api/v1/replication/promote/{shard}` (409 when no standby exists).
+* **Search results reference canonical ids** (`post_id`, `user_id`), never
+  index-local ones, and carry a real BM25 `_score`.
+* **Media uploads are idempotent by content**: the same bytes return the same
+  `media_id` with `deduplicated: true`.
+
+### Quick curl tour
+
+```bash
+# cache MISS then HIT
+curl -D - -o /dev/null localhost:8000/api/v1/posts/1 | grep -i x-cache
+curl -D - -o /dev/null localhost:8000/api/v1/posts/1 | grep -i x-cache
+
+# graph, feed, search, media, read model
+curl localhost:8000/api/v1/graph/users/1/followers
+curl "localhost:8000/api/v1/users/1/feed?limit=5"
+curl "localhost:8000/api/v1/search?q=sharding"
+curl -X POST localhost:8000/api/v1/media/upload -F "owner_id=1" -F "file=@a.png"
+curl localhost:8000/api/v1/read-model/stats
+
+# rebuild every derived system from PostgreSQL
+curl -X POST localhost:8000/api/v1/feed/rebuild
+curl -X POST localhost:8000/api/v1/read-model/rebuild
+curl -X POST localhost:8000/api/v1/search/reindex
+curl -X POST localhost:8000/api/v1/graph/rebuild
+
+# replication: real status, and the labelled simulation
+curl localhost:8000/api/v1/replication/status
+curl -X POST localhost:8000/api/v1/replication/demo/simulate-failover/shard-0
+
+# observability
+curl localhost:8000/api/v1/metrics      # JSON: counters, P50/P95/P99, cache, events
+curl localhost:8000/metrics             # Prometheus
 ```

@@ -1,75 +1,73 @@
 # Module owners & integration rules
 
-MetaScale is one integrated system. Members must build against the shared
-foundation rather than fork the schema or bypass the repository/router seams.
+MetaScale is one integrated system. Members build against the shared
+foundation rather than forking the schema or bypassing the repository /
+router seams. This file records who owns what **after** the integration, and
+what each member's original branch contributed.
+
+## Integration rules (non-negotiable)
+
+1. **PostgreSQL is the only source of truth.** Caches, indexes, projections
+   and blob stores are derived and must be rebuildable.
+2. **Layering**: route → service → cache → repository → shard router →
+   replication provider → PostgreSQL. No layer skips another.
+3. **The shard router never learns about caching**, and the cache never
+   learns about sharding.
+4. **No second relational engine.** SQLite and MySQL are out of the runtime;
+   useful logic was ported to Python over PostgreSQL.
+5. **Nothing may be called "real replication" unless a PostgreSQL command
+   actually runs.** Simulations carry `simulated: true`.
+6. **No fabricated numbers.** Benchmarks and metrics come from work that
+   happened.
+7. **Optional backends are off by default** and must not break startup.
 
 ## Ownership matrix
 
-| Member | Module | Owns | Does NOT own / touch |
+| Member | Module | Owns | Status after integration |
 |---|---|---|---|
-| 1 | Canonical database | `packages/models`, normalization, Alembic migrations, `infrastructure/postgres/init`, seed data | sharding internals, caches |
-| 3 | Denormalization | denormalized read-model projections (future `ReadModelProjector`), consumes domain events | canonical writes, shard routing |
-| **4 (implemented here)** | **Sharding (ShardRouter)** | shard-key mapping, consistent-hash ring + vnodes, shard registry, per-shard connection pools, targeted/scatter/cross-shard queries, hot-shard detection, rebalancing, sharding benchmarks | replication selection, caching, search/feed/graph/media logic |
-| 5 | Replication | primary/replica endpoints, replica lag, failover by replacing `ShardConnectionProvider` | choosing the shard (that is Member 4), ring topology |
-| **6 (implemented here)** | **Redis caching** | async cache-aside wrapper above repositories (`services/cache`), TTL, write invalidation, cache metrics, hot-key detection, fail-open, Docker Redis profile | repository internals and the shard router (must stay cache-unaware) |
-| 7+ | Feeds / TAO-inspired graph / Haystack-inspired media / search / observability | projections consuming events or repository reads; `MetricsSink` export | canonical schema as source of truth |
+| 1 | Canonical database | `packages/models`, Alembic migrations, `infrastructure/postgres/init`, deterministic seed | IMPLEMENTED |
+| 2 | Query optimisation / EXPLAIN analysis | design credited; the MySQL + Streamlit tool is out of the runtime | FUTURE |
+| 3 | Denormalization | `services/denormalization/`, `apps/api/routes/read_model.py` — event-driven `denormalized_post_feed`, rebuildable | IMPLEMENTED (Java/RabbitMQ worker superseded by the Python bus) |
+| 4 | Sharding | `services/shard-router/` — ring + vnodes, hash routing, registry, pooling, targeted/scatter/cross-shard, hot shards, online rebalance, checksums, health, metrics, benchmarks | IMPLEMENTED, preserved |
+| 5 | Replication | `services/replication/provider.py` — provider, read/write split, health + lag, promotion; compose standbys | IMPLEMENTED (compose replicas UNVERIFIED) |
+| 6 | Distributed cache | `services/cache/cache.py`, `apps/api/routes/cache.py` — cache-aside on `GET /posts/{id}`, TTL, invalidation, hot keys, fail-open | IMPLEMENTED |
+| 7 | Feed | `services/feed/service.py` — pull and fan-out-on-write, rebuildable push table | IMPLEMENTED |
+| 8 | Media | `services/media/` — SHA-256 CAS, `LocalBlobStore` / `MinioBlobStore`, metadata in PostgreSQL | IMPLEMENTED (MinIO OPTIONAL) |
+| 9 | Social graph | `services/graph/service.py` — rebuildable projection; SQLite removed | IMPLEMENTED (Node/SQLite service retired) |
+| 10 | Search | `services/search/` — `InMemorySearchProvider` (BM25) / `OpenSearchProvider`, autocomplete | IMPLEMENTED (OpenSearch OPTIONAL) |
+| 11 | Observability | `services/observability/`, `apps/api/routes/metrics.py` — `/metrics`, `/api/v1/metrics`, P50/P95/P99 | IMPLEMENTED |
+| 12 | Benchmarks | `benchmarks/unified_benchmark.py` (A–F) and `benchmarks/sharding/*` | IMPLEMENTED |
+| 15 | Events | `packages/events/` — `DomainEvent`, `EventBus`, `InMemory` / `RabbitMQ` / `Null` | IMPLEMENTED (RabbitMQ OPTIONAL) |
+| 16 | Deployment | `docker-compose.yml` (one file, seven profiles) | IMPLEMENTED, UNVERIFIED |
+| 17 | API surface | `apps/api/routes/` — 77 endpoints under `/api/v1` | IMPLEMENTED |
+| 18 | Configuration | `packages/common/config.py` + `.env.example` | IMPLEMENTED |
+| 19 | Health | `apps/api/routes/health.py` — `/health`, `/ready` | IMPLEMENTED |
+| 20 | Tests | `tests/` (unit, integration, contract, E2E) + per-service suites | IMPLEMENTED, 139 passing |
+| 21 | Duplicates | removal/adaptation pass | IMPLEMENTED |
+| 22 | Documentation | `docs/` | IMPLEMENTED |
+| 23 | Demo | `scripts/demo.py`, `docs/DEMO.md` | IMPLEMENTED |
+| 24 | Final verification | tests, lint, format, live run | IMPLEMENTED |
 
-The cardinal boundary: **Member 4 chooses the shard; Member 5 chooses the
-replica inside that shard; Member 6 sits above both.**
+## Cross-cutting contracts (see `packages/events/contracts.py`)
 
-```text
-Request → (M6 Cache) → Repository → M4 Shard Router → (M5 Replica provider) → PostgreSQL
-```
+Every cross-module extension point is declared once in
+`packages/events/contracts.py` with a pointer to its implementation:
 
-## Shared, frozen foundation (do not fork)
+* `EventBus` — `InMemoryEventBus` (default), `RabbitMQEventBus` (optional),
+  `NullEventBus`;
+* `CacheProvider` — `services.cache.cache.CacheProvider` above the
+  repository;
+* `SearchProvider` — `InMemorySearchProvider` / `OpenSearchProvider`;
+* `MediaBlobStore` — `LocalBlobStore` / `MinioBlobStore`;
+* the eight repository interfaces in `packages/db/repositories/base.py`,
+  implemented by both `Canonical*Repository` and `Sharded*Repository`;
+* `ShardConnectionProvider` — primary/replica resolution per shard.
 
-- ORM models: `packages/models/*` — one canonical schema for the canonical DB
-  AND every shard. Additive, reviewed migrations only.
-- DB plumbing: `packages/db/engine.py`, `session.py`, `shard_engine.py`,
-  `ids.py`, and `packages/db/repositories/base.py`.
-- Cross-cutting: `packages/common/{config,enums,exceptions,logging}.py`.
-- Contracts/seams: `packages/events/contracts.py`.
-- Seed data: `scripts/_dataset.py` (deterministic; shared by all members).
+## What members must not do
 
-## How each future member plugs in (integration guide)
-
-1. **Do not change canonical tables for derived data.** Build projections in
-   your own store keyed by canonical ids; PostgreSQL remains authoritative.
-2. **Talk to data through repository interfaces.** Depend on
-   `UserRepository`/`PostRepository`/`CommentRepository` (or add new abstract
-   repositories here, implemented for both canonical and sharded backends).
-3. **Member 3 (denormalization):** after a successful canonical write the
-   service publishes a `DomainEvent` (bus currently a no-op
-   `NotConfiguredEventBus`); subscribe your projector when messaging exists.
-4. **Member 5 (replication):** implement `ShardConnectionProvider` to return a
-   `ConnectionEndpoint(role="replica", url=...)` for reads and `role=
-   "primary"` for writes; register it via `ShardEngineManager(provider=...)`.
-   Routing, checksums, and query executors are unchanged.
-5. **Member 6 (cache):** decorate a repository with cache-aside. First target
-   `GET /api/v1/posts/{id}` with key `post:{id}`: on cache miss call the
-   repository (which itself routes through shards); on write invalidate. The
-   router must not receive any cache parameter.
-6. **Members 7+ (feed/graph/search/media):** implement the matching abstract
-   seam in `events/contracts.py`; read through repositories/events; store
-   blobs via the future `MediaBlobStore` (the `media` table holds metadata
-   only).
-7. **Observability:** consume `MetricsCollector.snapshot()` (or the registry
-   `/api/v1/shards/stats`) via a `MetricsSink`; structured logs already carry
-   `request_id, operation, shard_id, routing_strategy, key, query_type,
-   latency_ms, status`.
-
-## Adding a new shardable entity
-
-- add the model under `packages/models` (canonical DDL only);
-- extend `EntityName` and `DEFAULT_ENTITY_SHARD_KEYS` (or pass a custom
-  mapping) with the column that best serves its hot access path;
-- add a repository on the abstract base and a sharded implementation that
-  routes by the mapped column; keep cross-shard references FK-free;
-- the shard DDL regenerates via `python scripts/initialize_shards.py --write-sql`.
-
-## Definition of "done" for an integration change
-
-- canonical and sharded modes both work;
-- `make test` green (unit + real-PostgreSQL integration/contract tests);
-- no new canonical source of truth (caches/indexes are rebuildable);
-- no credentials in code; structured errors and logs preserved.
+* add a second write path that bypasses the repository interfaces;
+* read or write another member's derived table directly (subscribe to the
+  event, or rebuild);
+* introduce a new relational engine, a second settings system, or a second
+  FastAPI app;
+* call a simulation "real", or report a number that was not measured.

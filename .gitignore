@@ -39,3 +39,6 @@ benchmarks/results/raw/
 .idea/
 .vscode/
 .DS_Store
+
+# Runtime media blobs (uploads are runtime artifacts, PostgreSQL keeps metadata)
+var/media/

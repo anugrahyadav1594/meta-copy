@@ -66,3 +66,60 @@ Shivam (merged), #4 Dhiraj (merged — **replaced `main` with a SQL-only tree**)
   rewritten for canonical identifiers.
 * Member 7's `routes/feed.py` calls `ensure_push_table()` inside the GET
   handler (DDL per request).
+
+---
+
+## 4. Post-integration status (what was actually done)
+
+Audit table §1 describes what each branch contained when it was read. This
+section records what the integrated system does with it now, verified by
+running the code.
+
+| Member | Original state | Now | How it was integrated |
+|---|---|---|---|
+| 1 | SQL-only schema, no code | `packages/models/` ORM + Alembic + deterministic seed | hybrid schema adopted (Member-1 identifiers + foundation columns); shard DDL generated from the ORM; parity test against `infrastructure/postgres/init` |
+| 2 | MySQL/Streamlit EXPLAIN tool | **FUTURE** | design credited; MySQL runtime excluded; nothing deleted — simply not wired |
+| 3 | SQL backfill + Java AMQP worker | Python `DenormalizedFeedProjector` | ported; handles POST_CREATED/UPDATED/DELETED, LIKE_*, COMMENT_*; `POST /api/v1/read-model/rebuild` recomputes from canonical **and shards** |
+| 4 | Complete sharding implementation | preserved, extended | ring/vnodes/registry/pooling/targeted/scatter/cross-shard/hot-shard/rebalance/checksums/health/metrics intact; fixed two integration bugs (generic endpoints used canonical repos in non-`SHARDED` shard modes; per-shard joins in derived rebuilds) |
+| 5 | `failover_engine.py` simulation | real provider + labelled demo | `ReplicationAwareProvider` (read/write split, health, lag, `pg_promote()`); compose standbys added (UNVERIFIED); the original demo is preserved at `/api/v1/replication/demo/simulate-failover/{shard}` returning `simulated: true` |
+| 6 | Broken cache branch | reworked and integrated | cache-aside on `GET /posts/{id}` (`post:{id}`, TTL 60 s), invalidation on write, hot-key detection, fail-open; 23 cache tests + unit/integration coverage |
+| 7 | Pull feed with DDL-per-request | pull **and** push | DDL moved out of the GET (schema ensured once); works in NORMALIZED and SHARDED; `user_feed` marked derived; `/api/v1/users/{id}/feed` is the contract shape |
+| 8 | Standalone local-CAS service (+ duplicate MySQL one) | `services/media/` inside the API | `MediaBlobStore` → `LocalBlobStore` / `MinioBlobStore`; SHA-256 CAS, dedup returns the existing row; metadata in PostgreSQL; response names the backend actually used |
+| 9 | Node + SQLite graph | Python projection | no SQLite anywhere; adjacency rebuilt from `follows`; `/api/v1/graph/users/{id}/{followers,following}`, `mutuals/{other_id}`; `derived_projection: true` in its stats |
+| 10 | Hard-coded corpus | derived index | hard-coded documents deleted; index built from PostgreSQL (scatter over shards) + events; `SearchProvider` with in-memory BM25 and OpenSearch backends |
+| 11 | — none — | `services/observability/` | `/metrics` (Prometheus) + `/api/v1/metrics` (JSON) with request count, latency P50/P95/P99, db/cache/shard/replication/search/feed/media latency, hot shards, errors |
+| 12 | Sharding benchmarks only | + unified A–F | `benchmarks/unified_benchmark.py` runs one workload across six configurations and writes JSON + CSV |
+| 15 | Interface only | three transports | `InMemoryEventBus` (default), `RabbitMQEventBus` (optional), `NullEventBus`; services publish after commit; handler failures isolated and counted |
+| 16 | Partial compose | one file, seven profiles | `docker-compose.cache.yml` merged in; `media`, `observability`, `replication`, `distributed` profiles; Prometheus config added (it previously had none and would not have started) |
+| 17 | Several servers | one API | 77 endpoints under `/api/v1` plus `/health`, `/ready`, `/metrics` |
+| 18 | Partial env handling | one settings system | all six modes implemented; full `.env.example`; no credentials in source |
+| 19 | — | `/health` + `/ready` | readiness probes canonical PG, each shard, Redis, RabbitMQ, OpenSearch, MinIO and the replication topology; optional/disabled deps never fail the app |
+| 20 | Partial tests | 139 passing | unit (routing, hashing, cache, events, projections), integration (canonical, sharded, derived systems, media, search), contract, and the full E2E chain |
+| 21 | Duplicate list | resolved | see §2 and `FINAL_ARCHITECTURE.md` §10 |
+| 22 | README claims | seven docs | `ARCHITECTURE`, `API_CONTRACT`, `DATABASE_SCHEMA`, `MODULE_OWNERS`, `INTEGRATION_AUDIT`, `RUNBOOK`, `DEMO`, `FINAL_ARCHITECTURE` — each labelled IMPLEMENTED / SIMULATED / OPTIONAL / FUTURE |
+| 23 | — | `scripts/demo.py` | 20 steps executed against the live API; non-zero exit if any step fails |
+| 24 | — | verification table | see `FINAL_ARCHITECTURE.md` §11 |
+
+### Bugs found by running the system (not by reading it)
+
+1. `GET /api/v1/metrics` → 500 (`CacheProvider.metrics()` does not exist;
+   the method is `get_metrics()`), and the router was mounted on an empty
+   sub-path.
+2. `GET /api/v1/shards` → 500 (`row_count` was a `(shard_id, total)` tuple,
+   failing response validation).
+3. In `SHARDED_CACHED` / `SHARDED_REPLICATED` / `FULL_DISTRIBUTED` the
+   generic endpoints wrote to the canonical database, never to the shards.
+4. Derived rebuilds joined inside each shard, silently producing partial
+   projections (feed rebuild: 20 554 → 38 627 rows after the fix).
+5. Media de-duplication crashed on the second upload (UNIQUE `storage_key`)
+   instead of returning the existing row.
+6. Every new module used stdlib logging with structlog-style kwargs — the
+   first log line raised `TypeError`, which broke the replication demo
+   endpoint.
+7. `psycopg3` rejects `:param::type`; the feed fan-out used
+   `COALESCE(:created_at::timestamptz, now())`.
+8. A partial post update wrote `visibility = NULL` into the read model
+   (NOT NULL), so `POST_UPDATED` projection failed.
+9. Hashtags were indexed as `#metascale`, so a `metascale` query missed them.
+
+Each fix is committed with the reasoning in its message.
