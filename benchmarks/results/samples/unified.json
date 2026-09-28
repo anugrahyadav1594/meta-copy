@@ -1,0 +1,1416 @@
+{
+  "generated_at": "2026-09-28T19:13:16.603779+00:00",
+  "benchmark": "unified A-F",
+  "engine": "PostgreSQL 16 (embedded pgserver clusters or external URLs)",
+  "note": "Every figure below was measured by executing the workload; nothing is simulated.",
+  "results": [
+    {
+      "config": "A",
+      "mode": "NORMALIZED",
+      "description": "3NF canonical PostgreSQL only; every read joins.",
+      "layers": {
+        "sharding": false,
+        "replication": false,
+        "cache": false,
+        "denormalized": false
+      },
+      "dataset": {
+        "users": 40,
+        "posts": 160
+      },
+      "startup_seconds": 4.878,
+      "workload_seconds": 4.378,
+      "operations": [
+        {
+          "operation": "read_feed",
+          "n": 40,
+          "mean_ms": 5.756,
+          "p50_ms": 5.492,
+          "p95_ms": 11.877,
+          "p99_ms": 14.319,
+          "min_ms": 1.202,
+          "max_ms": 14.319,
+          "total_ms": 230.23,
+          "ops_per_sec": 173.74
+        },
+        {
+          "operation": "read_graph",
+          "n": 60,
+          "mean_ms": 0.761,
+          "p50_ms": 1.027,
+          "p95_ms": 1.914,
+          "p99_ms": 2.023,
+          "min_ms": 0.001,
+          "max_ms": 3.093,
+          "total_ms": 45.679,
+          "ops_per_sec": 1313.51
+        },
+        {
+          "operation": "read_post",
+          "n": 200,
+          "mean_ms": 1.423,
+          "p50_ms": 1.325,
+          "p95_ms": 1.894,
+          "p99_ms": 2.802,
+          "min_ms": 0.958,
+          "max_ms": 5.652,
+          "total_ms": 284.52,
+          "ops_per_sec": 702.94
+        },
+        {
+          "operation": "read_search",
+          "n": 30,
+          "mean_ms": 0.079,
+          "p50_ms": 0.071,
+          "p95_ms": 0.116,
+          "p99_ms": 0.172,
+          "min_ms": 0.063,
+          "max_ms": 0.172,
+          "total_ms": 2.357,
+          "ops_per_sec": 12726.1
+        },
+        {
+          "operation": "write_comment",
+          "n": 60,
+          "mean_ms": 5.766,
+          "p50_ms": 5.568,
+          "p95_ms": 6.641,
+          "p99_ms": 7.222,
+          "min_ms": 4.614,
+          "max_ms": 8.907,
+          "total_ms": 345.945,
+          "ops_per_sec": 173.44
+        },
+        {
+          "operation": "write_follow",
+          "n": 120,
+          "mean_ms": 1.749,
+          "p50_ms": 1.692,
+          "p95_ms": 2.294,
+          "p99_ms": 3.313,
+          "min_ms": 0.918,
+          "max_ms": 3.477,
+          "total_ms": 209.895,
+          "ops_per_sec": 571.72
+        },
+        {
+          "operation": "write_post",
+          "n": 160,
+          "mean_ms": 4.601,
+          "p50_ms": 4.446,
+          "p95_ms": 5.68,
+          "p99_ms": 8.623,
+          "min_ms": 3.597,
+          "max_ms": 9.548,
+          "total_ms": 736.226,
+          "ops_per_sec": 217.32
+        },
+        {
+          "operation": "write_user",
+          "n": 40,
+          "mean_ms": 61.784,
+          "p50_ms": 60.312,
+          "p95_ms": 71.047,
+          "p99_ms": 78.728,
+          "min_ms": 57.629,
+          "max_ms": 78.728,
+          "total_ms": 2471.366,
+          "ops_per_sec": 16.19
+        }
+      ],
+      "counters": {
+        "events": {
+          "transport": "in_memory",
+          "published": 260,
+          "delivered": 160,
+          "subscribers": 3,
+          "failures": 0
+        }
+      }
+    },
+    {
+      "config": "B",
+      "mode": "DENORMALIZED",
+      "description": "A + derived denormalized_post_feed (event-projected, rebuildable).",
+      "layers": {
+        "sharding": false,
+        "replication": false,
+        "cache": false,
+        "denormalized": true
+      },
+      "dataset": {
+        "users": 40,
+        "posts": 160
+      },
+      "startup_seconds": 5.39,
+      "workload_seconds": 4.892,
+      "operations": [
+        {
+          "operation": "read_feed",
+          "n": 40,
+          "mean_ms": 5.737,
+          "p50_ms": 5.477,
+          "p95_ms": 13.322,
+          "p99_ms": 15.403,
+          "min_ms": 1.095,
+          "max_ms": 15.403,
+          "total_ms": 229.475,
+          "ops_per_sec": 174.31
+        },
+        {
+          "operation": "read_graph",
+          "n": 60,
+          "mean_ms": 0.676,
+          "p50_ms": 1.128,
+          "p95_ms": 1.532,
+          "p99_ms": 1.76,
+          "min_ms": 0.001,
+          "max_ms": 1.768,
+          "total_ms": 40.583,
+          "ops_per_sec": 1478.46
+        },
+        {
+          "operation": "read_post",
+          "n": 200,
+          "mean_ms": 1.64,
+          "p50_ms": 1.476,
+          "p95_ms": 2.123,
+          "p99_ms": 4.98,
+          "min_ms": 0.99,
+          "max_ms": 10.416,
+          "total_ms": 327.982,
+          "ops_per_sec": 609.79
+        },
+        {
+          "operation": "read_search",
+          "n": 30,
+          "mean_ms": 0.077,
+          "p50_ms": 0.07,
+          "p95_ms": 0.103,
+          "p99_ms": 0.171,
+          "min_ms": 0.061,
+          "max_ms": 0.171,
+          "total_ms": 2.309,
+          "ops_per_sec": 12992.65
+        },
+        {
+          "operation": "write_comment",
+          "n": 60,
+          "mean_ms": 7.695,
+          "p50_ms": 7.674,
+          "p95_ms": 8.578,
+          "p99_ms": 8.995,
+          "min_ms": 6.395,
+          "max_ms": 11.578,
+          "total_ms": 461.703,
+          "ops_per_sec": 129.95
+        },
+        {
+          "operation": "write_follow",
+          "n": 120,
+          "mean_ms": 1.795,
+          "p50_ms": 1.76,
+          "p95_ms": 2.162,
+          "p99_ms": 2.485,
+          "min_ms": 1.167,
+          "max_ms": 3.168,
+          "total_ms": 215.364,
+          "ops_per_sec": 557.2
+        },
+        {
+          "operation": "write_post",
+          "n": 160,
+          "mean_ms": 6.961,
+          "p50_ms": 6.795,
+          "p95_ms": 8.252,
+          "p99_ms": 8.922,
+          "min_ms": 5.358,
+          "max_ms": 22.748,
+          "total_ms": 1113.698,
+          "ops_per_sec": 143.67
+        },
+        {
+          "operation": "write_user",
+          "n": 40,
+          "mean_ms": 61.845,
+          "p50_ms": 59.932,
+          "p95_ms": 73.097,
+          "p99_ms": 80.435,
+          "min_ms": 57.445,
+          "max_ms": 80.435,
+          "total_ms": 2473.815,
+          "ops_per_sec": 16.17
+        }
+      ],
+      "counters": {
+        "events": {
+          "transport": "in_memory",
+          "published": 260,
+          "delivered": 380,
+          "subscribers": 9,
+          "failures": 0
+        },
+        "read_model": {
+          "table": "denormalized_post_feed",
+          "derived": true,
+          "events_applied": 220,
+          "events_skipped": 0,
+          "errors": 0
+        }
+      }
+    },
+    {
+      "config": "C",
+      "mode": "SHARDED",
+      "description": "B's data spread over 4 independent clusters via the shard router.",
+      "layers": {
+        "sharding": true,
+        "replication": false,
+        "cache": false,
+        "denormalized": false
+      },
+      "dataset": {
+        "users": 40,
+        "posts": 160
+      },
+      "startup_seconds": 5.301,
+      "workload_seconds": 4.828,
+      "operations": [
+        {
+          "operation": "read_feed",
+          "n": 40,
+          "mean_ms": 5.925,
+          "p50_ms": 5.733,
+          "p95_ms": 11.93,
+          "p99_ms": 17.37,
+          "min_ms": 1.38,
+          "max_ms": 17.37,
+          "total_ms": 237.0,
+          "ops_per_sec": 168.78
+        },
+        {
+          "operation": "read_graph",
+          "n": 60,
+          "mean_ms": 1.974,
+          "p50_ms": 3.302,
+          "p95_ms": 4.176,
+          "p99_ms": 4.493,
+          "min_ms": 0.001,
+          "max_ms": 6.042,
+          "total_ms": 118.43,
+          "ops_per_sec": 506.63
+        },
+        {
+          "operation": "read_post",
+          "n": 200,
+          "mean_ms": 1.419,
+          "p50_ms": 1.407,
+          "p95_ms": 1.745,
+          "p99_ms": 1.941,
+          "min_ms": 1.071,
+          "max_ms": 2.213,
+          "total_ms": 283.821,
+          "ops_per_sec": 704.67
+        },
+        {
+          "operation": "read_search",
+          "n": 30,
+          "mean_ms": 0.085,
+          "p50_ms": 0.071,
+          "p95_ms": 0.197,
+          "p99_ms": 0.202,
+          "min_ms": 0.063,
+          "max_ms": 0.202,
+          "total_ms": 2.542,
+          "ops_per_sec": 11802.01
+        },
+        {
+          "operation": "write_comment",
+          "n": 60,
+          "mean_ms": 5.89,
+          "p50_ms": 5.833,
+          "p95_ms": 8.051,
+          "p99_ms": 8.731,
+          "min_ms": 4.595,
+          "max_ms": 9.439,
+          "total_ms": 353.4,
+          "ops_per_sec": 169.78
+        },
+        {
+          "operation": "write_follow",
+          "n": 120,
+          "mean_ms": 2.448,
+          "p50_ms": 2.394,
+          "p95_ms": 3.004,
+          "p99_ms": 4.701,
+          "min_ms": 1.152,
+          "max_ms": 5.205,
+          "total_ms": 293.82,
+          "ops_per_sec": 408.41
+        },
+        {
+          "operation": "write_post",
+          "n": 160,
+          "mean_ms": 4.805,
+          "p50_ms": 4.473,
+          "p95_ms": 6.004,
+          "p99_ms": 10.921,
+          "min_ms": 3.58,
+          "max_ms": 18.453,
+          "total_ms": 768.869,
+          "ops_per_sec": 208.1
+        },
+        {
+          "operation": "write_user",
+          "n": 40,
+          "mean_ms": 68.191,
+          "p50_ms": 63.965,
+          "p95_ms": 82.02,
+          "p99_ms": 120.06,
+          "min_ms": 58.968,
+          "max_ms": 120.06,
+          "total_ms": 2727.658,
+          "ops_per_sec": 14.66
+        }
+      ],
+      "counters": {
+        "sharding": {
+          "generated_at": 1790622780.4053555,
+          "shards": {
+            "shard-0": {
+              "requests": 151,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 2.517,
+              "reads": 112,
+              "writes": 39,
+              "errors": 0,
+              "avg_latency_ms": 2.739,
+              "p50_latency_ms": 1.905,
+              "p95_latency_ms": 4.178,
+              "p99_latency_ms": 6.36,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.1336
+            },
+            "shard-1": {
+              "requests": 273,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 4.55,
+              "reads": 187,
+              "writes": 86,
+              "errors": 0,
+              "avg_latency_ms": 2.152,
+              "p50_latency_ms": 1.639,
+              "p95_latency_ms": 3.743,
+              "p99_latency_ms": 5.63,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.2416
+            },
+            "shard-2": {
+              "requests": 494,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 8.233,
+              "reads": 310,
+              "writes": 184,
+              "errors": 0,
+              "avg_latency_ms": 2.06,
+              "p50_latency_ms": 1.665,
+              "p95_latency_ms": 3.546,
+              "p99_latency_ms": 6.099,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.4372
+            },
+            "shard-3": {
+              "requests": 212,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 3.533,
+              "reads": 141,
+              "writes": 71,
+              "errors": 0,
+              "avg_latency_ms": 2.335,
+              "p50_latency_ms": 2.052,
+              "p95_latency_ms": 5.238,
+              "p99_latency_ms": 6.801,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.1876
+            }
+          },
+          "shard_count": 4,
+          "total_requests": 1130,
+          "healthy_shards": 0,
+          "failed_shards": 0,
+          "routing_latency_avg_ms": 0.028,
+          "routing_latency_p95_ms": 0.042,
+          "routing_errors": 0,
+          "scatter_gather_queries": 31,
+          "cross_shard_queries": 0,
+          "rows_migrated": 0,
+          "migration_duration_ms": 0.0,
+          "migration_failures": 0
+        },
+        "events": {
+          "transport": "in_memory",
+          "published": 260,
+          "delivered": 160,
+          "subscribers": 3,
+          "failures": 0
+        },
+        "replication": {
+          "replication_active": false,
+          "read_from_replicas": true,
+          "max_lag_seconds": 5.0,
+          "shards": [
+            {
+              "shard_id": "shard-0",
+              "primary": {
+                "shard_id": "shard-0",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 7.49,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-1",
+              "primary": {
+                "shard_id": "shard-1",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 7.158,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-2",
+              "primary": {
+                "shard_id": "shard-2",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 8.909,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-3",
+              "primary": {
+                "shard_id": "shard-3",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 7.437,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            }
+          ],
+          "counters": {
+            "reads_primary": 754,
+            "reads_replica": 0,
+            "writes_primary": 380,
+            "replica_skipped_unhealthy": 0,
+            "replica_skipped_lag": 0,
+            "replica_read_ratio": 0.0,
+            "promotions": 0
+          },
+          "note": "Replicas are optional. With no SHARD_n_REPLICA_URL configured the provider serves everything from the primary and reports that honestly rather than simulating a standby."
+        }
+      }
+    },
+    {
+      "config": "D",
+      "mode": "SHARDED_REPLICATED",
+      "description": "C + replication-aware connection provider (read/write split).",
+      "layers": {
+        "sharding": true,
+        "replication": true,
+        "cache": false,
+        "denormalized": false
+      },
+      "dataset": {
+        "users": 40,
+        "posts": 160
+      },
+      "startup_seconds": 5.27,
+      "workload_seconds": 4.735,
+      "operations": [
+        {
+          "operation": "read_feed",
+          "n": 40,
+          "mean_ms": 6.231,
+          "p50_ms": 6.132,
+          "p95_ms": 12.266,
+          "p99_ms": 17.287,
+          "min_ms": 1.371,
+          "max_ms": 17.287,
+          "total_ms": 249.229,
+          "ops_per_sec": 160.5
+        },
+        {
+          "operation": "read_graph",
+          "n": 60,
+          "mean_ms": 1.793,
+          "p50_ms": 3.019,
+          "p95_ms": 3.839,
+          "p99_ms": 4.08,
+          "min_ms": 0.001,
+          "max_ms": 6.679,
+          "total_ms": 107.558,
+          "ops_per_sec": 557.84
+        },
+        {
+          "operation": "read_post",
+          "n": 200,
+          "mean_ms": 1.405,
+          "p50_ms": 1.347,
+          "p95_ms": 1.72,
+          "p99_ms": 1.934,
+          "min_ms": 1.081,
+          "max_ms": 6.123,
+          "total_ms": 281.003,
+          "ops_per_sec": 711.74
+        },
+        {
+          "operation": "read_search",
+          "n": 30,
+          "mean_ms": 0.075,
+          "p50_ms": 0.07,
+          "p95_ms": 0.107,
+          "p99_ms": 0.126,
+          "min_ms": 0.063,
+          "max_ms": 0.126,
+          "total_ms": 2.256,
+          "ops_per_sec": 13295.36
+        },
+        {
+          "operation": "write_comment",
+          "n": 60,
+          "mean_ms": 6.804,
+          "p50_ms": 6.15,
+          "p95_ms": 9.286,
+          "p99_ms": 14.83,
+          "min_ms": 5.174,
+          "max_ms": 15.433,
+          "total_ms": 408.25,
+          "ops_per_sec": 146.97
+        },
+        {
+          "operation": "write_follow",
+          "n": 120,
+          "mean_ms": 2.932,
+          "p50_ms": 2.832,
+          "p95_ms": 4.076,
+          "p99_ms": 5.584,
+          "min_ms": 1.279,
+          "max_ms": 6.066,
+          "total_ms": 351.829,
+          "ops_per_sec": 341.07
+        },
+        {
+          "operation": "write_post",
+          "n": 160,
+          "mean_ms": 4.713,
+          "p50_ms": 4.55,
+          "p95_ms": 5.749,
+          "p99_ms": 7.355,
+          "min_ms": 3.76,
+          "max_ms": 9.811,
+          "total_ms": 754.115,
+          "ops_per_sec": 212.17
+        },
+        {
+          "operation": "write_user",
+          "n": 40,
+          "mean_ms": 63.586,
+          "p50_ms": 61.013,
+          "p95_ms": 81.689,
+          "p99_ms": 87.297,
+          "min_ms": 58.063,
+          "max_ms": 87.297,
+          "total_ms": 2543.451,
+          "ops_per_sec": 15.73
+        }
+      ],
+      "counters": {
+        "sharding": {
+          "generated_at": 1790622785.6696846,
+          "shards": {
+            "shard-0": {
+              "requests": 189,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 3.15,
+              "reads": 136,
+              "writes": 53,
+              "errors": 0,
+              "avg_latency_ms": 2.383,
+              "p50_latency_ms": 1.898,
+              "p95_latency_ms": 5.235,
+              "p99_latency_ms": 6.344,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.1673
+            },
+            "shard-1": {
+              "requests": 253,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 4.217,
+              "reads": 169,
+              "writes": 84,
+              "errors": 0,
+              "avg_latency_ms": 2.333,
+              "p50_latency_ms": 1.853,
+              "p95_latency_ms": 4.122,
+              "p99_latency_ms": 6.039,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.2239
+            },
+            "shard-2": {
+              "requests": 312,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 5.2,
+              "reads": 206,
+              "writes": 106,
+              "errors": 0,
+              "avg_latency_ms": 2.197,
+              "p50_latency_ms": 1.76,
+              "p95_latency_ms": 3.685,
+              "p99_latency_ms": 5.934,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.2761
+            },
+            "shard-3": {
+              "requests": 376,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 6.267,
+              "reads": 239,
+              "writes": 137,
+              "errors": 0,
+              "avg_latency_ms": 2.168,
+              "p50_latency_ms": 1.74,
+              "p95_latency_ms": 4.587,
+              "p99_latency_ms": 5.665,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.3327
+            }
+          },
+          "shard_count": 4,
+          "total_requests": 1130,
+          "healthy_shards": 0,
+          "failed_shards": 0,
+          "routing_latency_avg_ms": 0.028,
+          "routing_latency_p95_ms": 0.043,
+          "routing_errors": 0,
+          "scatter_gather_queries": 31,
+          "cross_shard_queries": 0,
+          "rows_migrated": 0,
+          "migration_duration_ms": 0.0,
+          "migration_failures": 0
+        },
+        "events": {
+          "transport": "in_memory",
+          "published": 260,
+          "delivered": 160,
+          "subscribers": 3,
+          "failures": 0
+        },
+        "replication": {
+          "replication_active": false,
+          "read_from_replicas": true,
+          "max_lag_seconds": 5.0,
+          "shards": [
+            {
+              "shard_id": "shard-0",
+              "primary": {
+                "shard_id": "shard-0",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 11.677,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-1",
+              "primary": {
+                "shard_id": "shard-1",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 9.963,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-2",
+              "primary": {
+                "shard_id": "shard-2",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 8.731,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-3",
+              "primary": {
+                "shard_id": "shard-3",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 10.374,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            }
+          ],
+          "counters": {
+            "reads_primary": 754,
+            "reads_replica": 0,
+            "writes_primary": 380,
+            "replica_skipped_unhealthy": 0,
+            "replica_skipped_lag": 0,
+            "replica_read_ratio": 0.0,
+            "promotions": 0
+          },
+          "note": "Replicas are optional. With no SHARD_n_REPLICA_URL configured the provider serves everything from the primary and reports that honestly rather than simulating a standby."
+        }
+      }
+    },
+    {
+      "config": "E",
+      "mode": "SHARDED_CACHED",
+      "description": "C + Redis cache-aside above the repository (TTL 60s).",
+      "layers": {
+        "sharding": true,
+        "replication": false,
+        "cache": true,
+        "denormalized": false
+      },
+      "dataset": {
+        "users": 40,
+        "posts": 160
+      },
+      "startup_seconds": 5.05,
+      "workload_seconds": 4.485,
+      "operations": [
+        {
+          "operation": "read_feed",
+          "n": 40,
+          "mean_ms": 6.036,
+          "p50_ms": 5.91,
+          "p95_ms": 11.983,
+          "p99_ms": 14.9,
+          "min_ms": 1.347,
+          "max_ms": 14.9,
+          "total_ms": 241.449,
+          "ops_per_sec": 165.67
+        },
+        {
+          "operation": "read_graph",
+          "n": 60,
+          "mean_ms": 1.826,
+          "p50_ms": 3.178,
+          "p95_ms": 3.712,
+          "p99_ms": 4.6,
+          "min_ms": 0.001,
+          "max_ms": 6.029,
+          "total_ms": 109.564,
+          "ops_per_sec": 547.63
+        },
+        {
+          "operation": "read_post",
+          "n": 200,
+          "mean_ms": 0.778,
+          "p50_ms": 0.106,
+          "p95_ms": 1.975,
+          "p99_ms": 2.174,
+          "min_ms": 0.062,
+          "max_ms": 2.319,
+          "total_ms": 155.654,
+          "ops_per_sec": 1284.9
+        },
+        {
+          "operation": "read_search",
+          "n": 30,
+          "mean_ms": 0.079,
+          "p50_ms": 0.07,
+          "p95_ms": 0.115,
+          "p99_ms": 0.174,
+          "min_ms": 0.063,
+          "max_ms": 0.174,
+          "total_ms": 2.358,
+          "ops_per_sec": 12720.54
+        },
+        {
+          "operation": "write_comment",
+          "n": 60,
+          "mean_ms": 6.265,
+          "p50_ms": 6.27,
+          "p95_ms": 8.336,
+          "p99_ms": 9.361,
+          "min_ms": 4.233,
+          "max_ms": 9.478,
+          "total_ms": 375.926,
+          "ops_per_sec": 159.61
+        },
+        {
+          "operation": "write_follow",
+          "n": 120,
+          "mean_ms": 2.826,
+          "p50_ms": 2.748,
+          "p95_ms": 3.574,
+          "p99_ms": 4.875,
+          "min_ms": 1.395,
+          "max_ms": 4.966,
+          "total_ms": 339.153,
+          "ops_per_sec": 353.82
+        },
+        {
+          "operation": "write_post",
+          "n": 160,
+          "mean_ms": 4.556,
+          "p50_ms": 4.474,
+          "p95_ms": 5.198,
+          "p99_ms": 7.196,
+          "min_ms": 3.461,
+          "max_ms": 7.792,
+          "total_ms": 729.034,
+          "ops_per_sec": 219.47
+        },
+        {
+          "operation": "write_user",
+          "n": 40,
+          "mean_ms": 62.309,
+          "p50_ms": 60.303,
+          "p95_ms": 74.198,
+          "p99_ms": 86.452,
+          "min_ms": 57.613,
+          "max_ms": 86.452,
+          "total_ms": 2492.377,
+          "ops_per_sec": 16.05
+        }
+      ],
+      "counters": {
+        "cache": {
+          "backend": "memory",
+          "cache_hits": 128,
+          "cache_misses": 132,
+          "hit_ratio": 49.23,
+          "cache_sets": 132,
+          "cache_invalidations": 0,
+          "db_queries_avoided": 128
+        },
+        "sharding": {
+          "generated_at": 1790622790.7365544,
+          "shards": {
+            "shard-0": {
+              "requests": 319,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 5.317,
+              "reads": 187,
+              "writes": 132,
+              "errors": 0,
+              "avg_latency_ms": 2.292,
+              "p50_latency_ms": 2.311,
+              "p95_latency_ms": 4.312,
+              "p99_latency_ms": 5.362,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.3184
+            },
+            "shard-1": {
+              "requests": 236,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 3.933,
+              "reads": 159,
+              "writes": 77,
+              "errors": 0,
+              "avg_latency_ms": 2.25,
+              "p50_latency_ms": 1.797,
+              "p95_latency_ms": 4.428,
+              "p99_latency_ms": 6.206,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.2355
+            },
+            "shard-2": {
+              "requests": 204,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 3.4,
+              "reads": 129,
+              "writes": 75,
+              "errors": 0,
+              "avg_latency_ms": 2.282,
+              "p50_latency_ms": 2.299,
+              "p95_latency_ms": 4.388,
+              "p99_latency_ms": 5.341,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.2036
+            },
+            "shard-3": {
+              "requests": 243,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 4.05,
+              "reads": 147,
+              "writes": 96,
+              "errors": 0,
+              "avg_latency_ms": 2.275,
+              "p50_latency_ms": 2.307,
+              "p95_latency_ms": 4.3,
+              "p99_latency_ms": 6.293,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.2425
+            }
+          },
+          "shard_count": 4,
+          "total_requests": 1002,
+          "healthy_shards": 0,
+          "failed_shards": 0,
+          "routing_latency_avg_ms": 0.029,
+          "routing_latency_p95_ms": 0.039,
+          "routing_errors": 0,
+          "scatter_gather_queries": 31,
+          "cross_shard_queries": 0,
+          "rows_migrated": 0,
+          "migration_duration_ms": 0.0,
+          "migration_failures": 0
+        },
+        "events": {
+          "transport": "in_memory",
+          "published": 260,
+          "delivered": 160,
+          "subscribers": 3,
+          "failures": 0
+        },
+        "replication": {
+          "replication_active": false,
+          "read_from_replicas": true,
+          "max_lag_seconds": 5.0,
+          "shards": [
+            {
+              "shard_id": "shard-0",
+              "primary": {
+                "shard_id": "shard-0",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 8.389,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-1",
+              "primary": {
+                "shard_id": "shard-1",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 6.09,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-2",
+              "primary": {
+                "shard_id": "shard-2",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 6.77,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-3",
+              "primary": {
+                "shard_id": "shard-3",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 6.448,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            }
+          ],
+          "counters": {
+            "reads_primary": 626,
+            "reads_replica": 0,
+            "writes_primary": 380,
+            "replica_skipped_unhealthy": 0,
+            "replica_skipped_lag": 0,
+            "replica_read_ratio": 0.0,
+            "promotions": 0
+          },
+          "note": "Replicas are optional. With no SHARD_n_REPLICA_URL configured the provider serves everything from the primary and reports that honestly rather than simulating a standby."
+        }
+      }
+    },
+    {
+      "config": "F",
+      "mode": "FULL_DISTRIBUTED",
+      "description": "Everything: shards + replicas + cache + derived read model.",
+      "layers": {
+        "sharding": true,
+        "replication": true,
+        "cache": true,
+        "denormalized": true
+      },
+      "dataset": {
+        "users": 40,
+        "posts": 160
+      },
+      "startup_seconds": 5.321,
+      "workload_seconds": 4.842,
+      "operations": [
+        {
+          "operation": "read_feed",
+          "n": 40,
+          "mean_ms": 5.948,
+          "p50_ms": 5.855,
+          "p95_ms": 11.164,
+          "p99_ms": 15.483,
+          "min_ms": 1.268,
+          "max_ms": 15.483,
+          "total_ms": 237.911,
+          "ops_per_sec": 168.13
+        },
+        {
+          "operation": "read_graph",
+          "n": 60,
+          "mean_ms": 1.647,
+          "p50_ms": 2.954,
+          "p95_ms": 3.251,
+          "p99_ms": 3.423,
+          "min_ms": 0.001,
+          "max_ms": 5.099,
+          "total_ms": 98.835,
+          "ops_per_sec": 607.07
+        },
+        {
+          "operation": "read_post",
+          "n": 200,
+          "mean_ms": 0.716,
+          "p50_ms": 0.091,
+          "p95_ms": 1.826,
+          "p99_ms": 1.945,
+          "min_ms": 0.061,
+          "max_ms": 2.121,
+          "total_ms": 143.117,
+          "ops_per_sec": 1397.46
+        },
+        {
+          "operation": "read_search",
+          "n": 30,
+          "mean_ms": 0.079,
+          "p50_ms": 0.071,
+          "p95_ms": 0.115,
+          "p99_ms": 0.14,
+          "min_ms": 0.063,
+          "max_ms": 0.14,
+          "total_ms": 2.376,
+          "ops_per_sec": 12627.95
+        },
+        {
+          "operation": "write_comment",
+          "n": 60,
+          "mean_ms": 7.71,
+          "p50_ms": 7.58,
+          "p95_ms": 10.133,
+          "p99_ms": 11.308,
+          "min_ms": 5.559,
+          "max_ms": 12.148,
+          "total_ms": 462.625,
+          "ops_per_sec": 129.69
+        },
+        {
+          "operation": "write_follow",
+          "n": 120,
+          "mean_ms": 2.779,
+          "p50_ms": 2.733,
+          "p95_ms": 3.644,
+          "p99_ms": 4.642,
+          "min_ms": 1.431,
+          "max_ms": 4.652,
+          "total_ms": 333.474,
+          "ops_per_sec": 359.85
+        },
+        {
+          "operation": "write_post",
+          "n": 160,
+          "mean_ms": 6.591,
+          "p50_ms": 6.321,
+          "p95_ms": 8.996,
+          "p99_ms": 10.323,
+          "min_ms": 5.141,
+          "max_ms": 13.645,
+          "total_ms": 1054.505,
+          "ops_per_sec": 151.73
+        },
+        {
+          "operation": "write_user",
+          "n": 40,
+          "mean_ms": 61.906,
+          "p50_ms": 59.587,
+          "p95_ms": 69.814,
+          "p99_ms": 98.266,
+          "min_ms": 57.888,
+          "max_ms": 98.266,
+          "total_ms": 2476.245,
+          "ops_per_sec": 16.15
+        }
+      ],
+      "counters": {
+        "cache": {
+          "backend": "memory",
+          "cache_hits": 128,
+          "cache_misses": 132,
+          "hit_ratio": 49.23,
+          "cache_sets": 132,
+          "cache_invalidations": 0,
+          "db_queries_avoided": 128
+        },
+        "sharding": {
+          "generated_at": 1790622796.057694,
+          "shards": {
+            "shard-0": {
+              "requests": 240,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 4.0,
+              "reads": 151,
+              "writes": 89,
+              "errors": 0,
+              "avg_latency_ms": 2.307,
+              "p50_latency_ms": 2.194,
+              "p95_latency_ms": 4.488,
+              "p99_latency_ms": 5.803,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.2395
+            },
+            "shard-1": {
+              "requests": 180,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 3.0,
+              "reads": 119,
+              "writes": 61,
+              "errors": 0,
+              "avg_latency_ms": 2.296,
+              "p50_latency_ms": 2.394,
+              "p95_latency_ms": 4.26,
+              "p99_latency_ms": 6.894,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.1796
+            },
+            "shard-2": {
+              "requests": 212,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 3.533,
+              "reads": 129,
+              "writes": 83,
+              "errors": 0,
+              "avg_latency_ms": 2.279,
+              "p50_latency_ms": 2.273,
+              "p95_latency_ms": 4.248,
+              "p99_latency_ms": 6.474,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.2116
+            },
+            "shard-3": {
+              "requests": 370,
+              "status": "BOOTSTRAPPING",
+              "requests_per_sec": 6.167,
+              "reads": 223,
+              "writes": 147,
+              "errors": 0,
+              "avg_latency_ms": 2.143,
+              "p50_latency_ms": 1.919,
+              "p95_latency_ms": 4.126,
+              "p99_latency_ms": 5.56,
+              "active_connections": 0,
+              "rows": 0,
+              "load_fraction": 0.3693
+            }
+          },
+          "shard_count": 4,
+          "total_requests": 1002,
+          "healthy_shards": 0,
+          "failed_shards": 0,
+          "routing_latency_avg_ms": 0.029,
+          "routing_latency_p95_ms": 0.046,
+          "routing_errors": 0,
+          "scatter_gather_queries": 31,
+          "cross_shard_queries": 0,
+          "rows_migrated": 0,
+          "migration_duration_ms": 0.0,
+          "migration_failures": 0
+        },
+        "events": {
+          "transport": "in_memory",
+          "published": 260,
+          "delivered": 380,
+          "subscribers": 9,
+          "failures": 0
+        },
+        "read_model": {
+          "table": "denormalized_post_feed",
+          "derived": true,
+          "events_applied": 220,
+          "events_skipped": 0,
+          "errors": 0
+        },
+        "replication": {
+          "replication_active": false,
+          "read_from_replicas": true,
+          "max_lag_seconds": 5.0,
+          "shards": [
+            {
+              "shard_id": "shard-0",
+              "primary": {
+                "shard_id": "shard-0",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 8.187,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-1",
+              "primary": {
+                "shard_id": "shard-1",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 6.257,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-2",
+              "primary": {
+                "shard_id": "shard-2",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 7.75,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            },
+            {
+              "shard_id": "shard-3",
+              "primary": {
+                "shard_id": "shard-3",
+                "role": "primary",
+                "reachable": true,
+                "latency_ms": 7.741,
+                "in_recovery": false,
+                "replication_lag_seconds": null,
+                "error": null
+              },
+              "replica": null,
+              "replica_configured": false,
+              "replica_is_real_standby": false,
+              "read_routing": "primary"
+            }
+          ],
+          "counters": {
+            "reads_primary": 626,
+            "reads_replica": 0,
+            "writes_primary": 380,
+            "replica_skipped_unhealthy": 0,
+            "replica_skipped_lag": 0,
+            "replica_read_ratio": 0.0,
+            "promotions": 0
+          },
+          "note": "Replicas are optional. With no SHARD_n_REPLICA_URL configured the provider serves everything from the primary and reports that honestly rather than simulating a standby."
+        }
+      }
+    }
+  ]
+}

@@ -7,7 +7,8 @@ export PYTHONPATH := $(PWD)/packages:$(PWD)/services/shard-router:$(PWD)/apps:$(
 export DOCKER_BUILDKIT := 1
 
 .PHONY: help install up down reset sharding cache messaging search media observability \
-        replication distributed dev-cache seed seed-small seed-medium seed-large \
+        replication distributed dev-cache dev-full seed seed-small seed-medium seed-large \
+        benchmark-unified compose-config \
         shard-seed shard-init api test test-unit test-integration lint format \
         benchmark benchmark-routing benchmark-db health migrate logs
 
@@ -139,6 +140,9 @@ benchmark-routing:  ## Pure router benchmarks (no database needed)
 
 benchmark-db:  ## DB-backed scaling scenarios A-E (embedded PG or SHARD_n_URL)
 	$(PYTHON) benchmarks/sharding/benchmark_scaling.py
+
+benchmark-unified:  ## Unified A-F comparison (JSON + CSV in benchmarks/results)
+	$(PYTHON) benchmarks/unified_benchmark.py
 
 logs:
 	$(COMPOSE) logs -f api
