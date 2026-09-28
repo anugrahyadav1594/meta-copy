@@ -35,19 +35,39 @@ async def metrics(platform: Platform = Depends(get_platform)) -> dict[str, Any]:
     if platform.cache is not None:
         cache_stats = platform.cache.get_metrics()
         snapshot["cache"] = cache_stats
+        # Mirror the provider's counters into the Prometheus registry so the
+        # scrape target reports the same numbers as the JSON view. These are
+        # gauges because they come from another module's counters.
         REGISTRY.set_gauge("cache_hit_ratio", cache_stats.get("hit_ratio", 0.0))
-        REGISTRY.increment("cache_hits", 0)
-        REGISTRY.increment("cache_misses", 0)
+        REGISTRY.set_gauge("cache_hits", cache_stats.get("cache_hits", 0))
+        REGISTRY.set_gauge("cache_misses", cache_stats.get("cache_misses", 0))
+        REGISTRY.set_gauge("cache_errors", cache_stats.get("cache_errors", 0))
+        REGISTRY.set_gauge(
+            "cache_invalidations", cache_stats.get("cache_invalidations", 0)
+        )
+        REGISTRY.set_gauge(
+            "db_queries_avoided", cache_stats.get("db_queries_avoided", 0)
+        )
     if platform.metrics is not None:
         shard_snapshot = platform.metrics.snapshot(platform.registry)
         snapshot["sharding"] = shard_snapshot
         REGISTRY.set_gauge("shard_requests", shard_snapshot.get("total_requests", 0))
     if platform.event_bus is not None and hasattr(platform.event_bus, "stats"):
-        snapshot["events"] = platform.event_bus.stats()
+        events = platform.event_bus.stats()
+        snapshot["events"] = events
+        REGISTRY.set_gauge("events_published", events.get("published", 0))
+        REGISTRY.set_gauge("events_delivered", events.get("delivered", 0))
+        REGISTRY.set_gauge("events_failures", events.get("failures", 0))
     if platform.search_indexer is not None:
-        snapshot["search"] = platform.search_indexer.stats()
+        search = platform.search_indexer.stats()
+        snapshot["search"] = search
+        REGISTRY.set_gauge("search_documents", search.get("documents", 0))
+        REGISTRY.set_gauge("search_queries", search.get("queries", 0))
     if platform.denormalizer is not None:
-        snapshot["read_model"] = platform.denormalizer.stats()
+        read_model = platform.denormalizer.stats()
+        snapshot["read_model"] = read_model
+        REGISTRY.set_gauge("read_model_events_applied", read_model.get("events_applied", 0))
+        REGISTRY.set_gauge("read_model_errors", read_model.get("errors", 0))
     return snapshot
 
 

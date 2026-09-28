@@ -356,3 +356,50 @@ async def test_health_check_endpoint(sharded_client):
 
     r = await sharded_client.post("/api/v1/shards/nope/health-check")
     assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_shard_list_serialises_row_counts_as_integers(infra, clean) -> None:
+    """Regression: row_count was once a (shard_id, total) tuple -> HTTP 500.
+
+    ``ShardService.refresh_row_counts`` gathers ``(shard_id, total)`` tuples;
+    storing the tuple instead of the total made ``GET /api/v1/shards`` fail
+    FastAPI response validation.
+    """
+    from httpx import ASGITransport, AsyncClient
+
+    from api.main import create_app
+    from common.config import Settings
+
+    settings_obj, _clusters, urls = infra
+    settings = Settings(
+        database_url=settings_obj.database_url,
+        mode="SHARDED",
+        sharding_enabled=True,
+        shard_count=4,
+        shard_0_url=urls.get("shard-0"),
+        shard_1_url=urls.get("shard-1"),
+        shard_2_url=urls.get("shard-2"),
+        shard_3_url=urls.get("shard-3"),
+        db_pool_size=5,
+        db_max_overflow=5,
+    )
+    app = create_app(settings)
+    from api.dependencies import get_platform
+
+    platform = get_platform()
+    await platform.start()
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            res = await client.get("/api/v1/shards")
+            assert res.status_code == 200, res.text
+            for shard in res.json()["shards"]:
+                assert isinstance(shard["row_count"], int)
+                assert isinstance(shard["requests"], int)
+
+            res = await client.get("/api/v1/shards/distribution?sample_size=1000")
+            assert res.status_code == 200
+    finally:
+        await platform.shutdown()

@@ -145,8 +145,13 @@ class ShardService:
         )
         counts: dict[str, int] = {}
         for sid, result in zip(p.router.shard_ids, results, strict=True):
-            if not isinstance(result, Exception):
-                counts[sid] = result
+            if isinstance(result, Exception):
+                continue
+            # count_shard() returns (shard_id, total): store the total, not
+            # the tuple, otherwise row_count serialises as a pair and
+            # GET /api/v1/shards fails response validation with a 500.
+            _, total = result
+            counts[sid] = int(total)
         p.registry.set_row_counts(counts)
         p.metrics.set_row_counts(counts)
         return counts
