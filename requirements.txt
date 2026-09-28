@@ -1,0 +1,13 @@
+# Runtime dependencies for MetaScale (pinned to modern major versions)
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic[email]>=2.6  # email extra: EmailStr validation in user schemas
+pydantic-settings>=2.2
+SQLAlchemy[asyncio]>=2.0.29  # asyncio extra: greenlet for async engines
+psycopg[binary]>=3.1
+alembic>=1.13
+httpx>=0.27
+python-multipart>=0.0.9  # multipart/form-data uploads (media service)
+
+# Distributed cache (Member 6) — async Redis client
+redis>=5.0,<6.0

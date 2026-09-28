@@ -1,0 +1,6 @@
+scenario,rps,avg_latency_ms,p50_latency_ms,p95_latency_ms,p99_latency_ms,cpu_pct,routing_overhead_avg_ms,rows_migrated,duration_ms,status
+A_single_pg,993.5,45.3585,39.4228,87.986,121.6305,98.4,,,,
+B_four_shards_targeted,813.8,56.6825,49.339,99.9054,143.8769,100.1,0.01853,,,
+C_scatter_gather,121.11,239.0073,250.928,278.3925,280.4695,102.3,,,,
+D_hot_user,948.2,49.255,51.7786,125.9345,187.1587,99.7,,,,
+E_rebalance_4_to_5,,,,,,,,58,157.06,COMPLETED

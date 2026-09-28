@@ -1,0 +1,156 @@
+{
+  "benchmark": "benchmark_scaling",
+  "requests": 1500,
+  "concurrency": 48,
+  "generated_at": "2026-09-10T16:32:52",
+  "results": {
+    "A": {
+      "samples": 1500,
+      "avg_latency_ms": 45.3585,
+      "p50_latency_ms": 39.4228,
+      "p95_latency_ms": 87.986,
+      "p99_latency_ms": 121.6305,
+      "max_latency_ms": 156.8727,
+      "scenario": "A_single_pg",
+      "requests": 1500,
+      "concurrency": 48,
+      "elapsed_s": 1.51,
+      "rps": 993.5,
+      "cpu_pct": 98.4
+    },
+    "B": {
+      "samples": 1500,
+      "avg_latency_ms": 56.6825,
+      "p50_latency_ms": 49.339,
+      "p95_latency_ms": 99.9054,
+      "p99_latency_ms": 143.8769,
+      "max_latency_ms": 244.0911,
+      "scenario": "B_four_shards_targeted",
+      "requests": 1500,
+      "concurrency": 48,
+      "elapsed_s": 1.843,
+      "rps": 813.8,
+      "routing_overhead_avg_ms": 0.01853,
+      "cpu_pct": 100.1
+    },
+    "C": {
+      "samples": 40,
+      "avg_latency_ms": 239.0073,
+      "p50_latency_ms": 250.928,
+      "p95_latency_ms": 278.3925,
+      "p99_latency_ms": 280.4695,
+      "max_latency_ms": 280.4695,
+      "scenario": "C_scatter_gather",
+      "requests": 40,
+      "concurrency": 48,
+      "elapsed_s": 0.33,
+      "rps": 121.11,
+      "avg_fanout_ms": 59.697,
+      "avg_merge_ms": 0.2119,
+      "shards_contacted_per_query": 4,
+      "shard_touches": {
+        "shard-0": 40,
+        "shard-1": 40,
+        "shard-2": 40,
+        "shard-3": 40
+      },
+      "cpu_pct": 102.3
+    },
+    "D": {
+      "samples": 1500,
+      "avg_latency_ms": 49.255,
+      "p50_latency_ms": 51.7786,
+      "p95_latency_ms": 125.9345,
+      "p99_latency_ms": 187.1587,
+      "max_latency_ms": 249.7202,
+      "scenario": "D_hot_user",
+      "requests": 1500,
+      "hot_user_id": 50,
+      "hot_shard": "shard-2",
+      "per_shard_load_pct": {
+        "shard-0": 4.3,
+        "shard-1": 6.0,
+        "shard-2": 85.1,
+        "shard-3": 4.5
+      },
+      "hot_findings": [
+        "shard-2: 85.1% of traffic (fair 25.0%, 17.18x peers) [load 85.1% >= threshold 40%, 17.18x peer mean (>= 1.8)]"
+      ],
+      "elapsed_s": 1.582,
+      "rps": 948.2,
+      "cpu_pct": 99.7
+    },
+    "E": {
+      "scenario": "E_rebalance_4_to_5",
+      "keys_to_move": 29,
+      "rows_migrated": 58,
+      "status": "COMPLETED",
+      "duration_ms": 157.06,
+      "checksum_verified": true,
+      "final_shard_count": 5,
+      "phases": [
+        "PLANNED",
+        "COPYING",
+        "VERIFYING",
+        "COPYING",
+        "VERIFYING",
+        "COPYING",
+        "VERIFYING",
+        "COPYING",
+        "VERIFYING",
+        "COPYING",
+        "VERIFYING",
+        "COPYING",
+        "VERIFYING",
+        "COPYING",
+        "VERIFYING",
+        "COPYING",
+        "VERIFYING",
+        "SWITCHING",
+        "SWITCHING",
+        "SWITCHING",
+        "SWITCHING",
+        "SWITCHING",
+        "SWITCHING",
+        "SWITCHING",
+        "SWITCHING",
+        "SWITCHING",
+        "COMPLETED"
+      ],
+      "checksums": {
+        "source": {
+          "users": {
+            "table": "users",
+            "row_count": 7,
+            "primary_keys_sample": "6,24,65,71,79,90,94",
+            "primary_key_count": 7,
+            "content_hash": "d48b7089fecf8ade3a69128fc4336672"
+          },
+          "profiles": {
+            "table": "profiles",
+            "row_count": 7,
+            "primary_keys_sample": "6,24,65,71,79,90,94",
+            "primary_key_count": 7,
+            "content_hash": "1b3a57209c4785c57b73364769bf35d3"
+          }
+        },
+        "destination": {
+          "users": {
+            "table": "users",
+            "row_count": 7,
+            "primary_keys_sample": "6,24,65,71,79,90,94",
+            "primary_key_count": 7,
+            "content_hash": "d48b7089fecf8ade3a69128fc4336672"
+          },
+          "profiles": {
+            "table": "profiles",
+            "row_count": 7,
+            "primary_keys_sample": "6,24,65,71,79,90,94",
+            "primary_key_count": 7,
+            "content_hash": "1b3a57209c4785c57b73364769bf35d3"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,360 @@
+# MetaScale — ONE compose file, profile-driven.
+#
+# A laptop does not have to run everything. Choose a profile:
+#
+#   docker compose up                       # canonical PostgreSQL + API (NORMALIZED)
+#   docker compose --profile sharding up    # + 4 independent shards (+1 spare)
+#   docker compose --profile cache up       # + Redis (cache-aside, rebuildable)
+#   docker compose --profile messaging up   # + RabbitMQ (domain events)
+#   docker compose --profile search up      # + OpenSearch (derived index)
+#   docker compose --profile media up       # + MinIO (blob store)
+#   docker compose --profile observability up   # + Prometheus + Grafana
+#   docker compose --profile replication up # + streaming replicas of shard 0-3
+#   docker compose --profile distributed up # everything at once
+#
+# Profiles may be combined:  --profile sharding --profile cache
+# Enable the matching backend with an environment variable, e.g.
+#   CACHE_ENABLED=true docker compose --profile cache up
+#   EVENT_BUS=rabbitmq docker compose --profile messaging up
+#   SEARCH_PROVIDER=opensearch docker compose --profile search up
+#   MEDIA_BACKEND=minio docker compose --profile media up
+#   MODE=FULL_DISTRIBUTED docker compose --profile distributed up
+#
+# Every optional backend is OFF by default and the API starts without it:
+# /ready reports their status, and a missing optional dependency never fails
+# the application (see docs/RUNBOOK.md).
+#
+# NOTE: the API's container-level depends_on only covers the canonical
+# database, which is always present. Optional backends are health-checked at
+# runtime instead of at start-up, so a half-started stack still comes up and
+# tells you what is missing through /ready.
+
+x-pg-env: &pg-env
+  POSTGRES_USER: metascale
+  POSTGRES_PASSWORD: metascale
+  POSTGRES_DB: metascale
+  # wal_level=replica is the PostgreSQL 16 default; stated explicitly because
+  # the `replication` profile attaches real streaming standbys to the shards.
+  POSTGRES_INITDB_ARGS: "--wal-level=replica --max-wal-senders=10 --max-replication-slots=10"
+  # The replication profile needs md5 auth for the `repl` role created by
+  # infrastructure/postgres/shards/shard-N/002_replication.sql.
+  POSTGRES_HOST_AUTH_METHOD: md5
+
+x-pg-healthcheck: &pg-healthcheck
+  test: ["CMD-SHELL", "pg_isready -U metascale -d metascale"]
+  interval: 5s
+  timeout: 5s
+  retries: 12
+
+services:
+  # ------------------------------------------------------------- canonical
+  postgres:
+    image: postgres:16-alpine
+    environment: *pg-env
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_canonical_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck: *pg-healthcheck
+
+  # --------------------------------------------------------------- shards
+  postgres-shard-0:
+    image: postgres:16-alpine
+    profiles: ["sharding", "distributed"]
+    environment: *pg-env
+    ports:
+      - "5540:5432"
+    volumes:
+      - pg_shard0_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/shards/shard-0:/docker-entrypoint-initdb.d:ro
+    healthcheck: *pg-healthcheck
+
+  postgres-shard-1:
+    image: postgres:16-alpine
+    profiles: ["sharding", "distributed"]
+    environment: *pg-env
+    ports:
+      - "5541:5432"
+    volumes:
+      - pg_shard1_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/shards/shard-1:/docker-entrypoint-initdb.d:ro
+    healthcheck: *pg-healthcheck
+
+  postgres-shard-2:
+    image: postgres:16-alpine
+    profiles: ["sharding", "distributed"]
+    environment: *pg-env
+    ports:
+      - "5542:5432"
+    volumes:
+      - pg_shard2_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/shards/shard-2:/docker-entrypoint-initdb.d:ro
+    healthcheck: *pg-healthcheck
+
+  postgres-shard-3:
+    image: postgres:16-alpine
+    profiles: ["sharding", "distributed"]
+    environment: *pg-env
+    ports:
+      - "5543:5432"
+    volumes:
+      - pg_shard3_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/shards/shard-3:/docker-entrypoint-initdb.d:ro
+    healthcheck: *pg-healthcheck
+
+  # Spare shard used by the live 4 -> 5 online rebalancing demo.
+  postgres-shard-4:
+    image: postgres:16-alpine
+    profiles: ["sharding", "distributed"]
+    environment: *pg-env
+    ports:
+      - "5544:5432"
+    volumes:
+      - pg_shard4_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/shards/shard-4:/docker-entrypoint-initdb.d:ro
+    healthcheck: *pg-healthcheck
+
+  # ------------------------------------------------- streaming replication
+  # REAL PostgreSQL streaming standbys (bitnami images run pg_basebackup on
+  # first boot). The API reaches them through ShardConnectionProvider's
+  # read/write split; SHARD_n_REPLICA_URL below is what wires it up.
+  #
+  # STATUS: provided but NOT verified in the sandbox where this file was
+  # written (no Docker daemon available). The endpoints, health checks, lag
+  # reporting and promotion abstraction in services/replication/provider.py
+  # are the part that is exercised by tests.
+  postgres-shard-0-replica:
+    image: bitnami/postgresql:16
+    profiles: ["replication", "distributed"]
+    environment:
+      POSTGRESQL_REPLICATION_MODE: standby
+      POSTGRESQL_MASTER_HOST: postgres-shard-0
+      POSTGRESQL_MASTER_PORT_NUMBER: "5432"
+      POSTGRESQL_REPLICATION_USER: repl
+      POSTGRESQL_REPLICATION_PASSWORD: replpassword
+      POSTGRESQL_USERNAME: metascale
+      POSTGRESQL_PASSWORD: metascale
+      POSTGRESQL_DATABASE: metascale
+      POSTGRESQL_MASTER_CREATE_DATABASE: "no"
+    ports:
+      - "5640:5432"
+    volumes:
+      - pg_shard0_replica_data:/bitnami/postgresql
+    depends_on:
+      postgres-shard-0:
+        condition: service_healthy
+
+  postgres-shard-1-replica:
+    image: bitnami/postgresql:16
+    profiles: ["replication", "distributed"]
+    environment:
+      POSTGRESQL_REPLICATION_MODE: standby
+      POSTGRESQL_MASTER_HOST: postgres-shard-1
+      POSTGRESQL_MASTER_PORT_NUMBER: "5432"
+      POSTGRESQL_REPLICATION_USER: repl
+      POSTGRESQL_REPLICATION_PASSWORD: replpassword
+      POSTGRESQL_USERNAME: metascale
+      POSTGRESQL_PASSWORD: metascale
+      POSTGRESQL_DATABASE: metascale
+      POSTGRESQL_MASTER_CREATE_DATABASE: "no"
+    ports:
+      - "5641:5432"
+    volumes:
+      - pg_shard1_replica_data:/bitnami/postgresql
+    depends_on:
+      postgres-shard-1:
+        condition: service_healthy
+
+  postgres-shard-2-replica:
+    image: bitnami/postgresql:16
+    profiles: ["replication", "distributed"]
+    environment:
+      POSTGRESQL_REPLICATION_MODE: standby
+      POSTGRESQL_MASTER_HOST: postgres-shard-2
+      POSTGRESQL_MASTER_PORT_NUMBER: "5432"
+      POSTGRESQL_REPLICATION_USER: repl
+      POSTGRESQL_REPLICATION_PASSWORD: replpassword
+      POSTGRESQL_USERNAME: metascale
+      POSTGRESQL_PASSWORD: metascale
+      POSTGRESQL_DATABASE: metascale
+      POSTGRESQL_MASTER_CREATE_DATABASE: "no"
+    ports:
+      - "5642:5432"
+    volumes:
+      - pg_shard2_replica_data:/bitnami/postgresql
+    depends_on:
+      postgres-shard-2:
+        condition: service_healthy
+
+  postgres-shard-3-replica:
+    image: bitnami/postgresql:16
+    profiles: ["replication", "distributed"]
+    environment:
+      POSTGRESQL_REPLICATION_MODE: standby
+      POSTGRESQL_MASTER_HOST: postgres-shard-3
+      POSTGRESQL_MASTER_PORT_NUMBER: "5432"
+      POSTGRESQL_REPLICATION_USER: repl
+      POSTGRESQL_REPLICATION_PASSWORD: replpassword
+      POSTGRESQL_USERNAME: metascale
+      POSTGRESQL_PASSWORD: metascale
+      POSTGRESQL_DATABASE: metascale
+      POSTGRESQL_MASTER_CREATE_DATABASE: "no"
+    ports:
+      - "5643:5432"
+    volumes:
+      - pg_shard3_replica_data:/bitnami/postgresql
+    depends_on:
+      postgres-shard-3:
+        condition: service_healthy
+
+  # ------------------------------------------------------------------- API
+  api:
+    build: .
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DEBUG: ${DEBUG:-true}
+      # NORMALIZED | DENORMALIZED | SHARDED | SHARDED_REPLICATED
+      # SHARDED_CACHED | FULL_DISTRIBUTED
+      MODE: ${MODE:-NORMALIZED}
+      SHARDING_ENABLED: ${SHARDING_ENABLED:-false}
+      SHARDING_STRATEGY: ${SHARDING_STRATEGY:-consistent_hash}
+      SHARD_COUNT: ${SHARD_COUNT:-4}
+      VIRTUAL_NODES_PER_SHARD: ${VIRTUAL_NODES_PER_SHARD:-150}
+      DATABASE_URL: postgresql+psycopg://metascale:metascale@postgres:5432/metascale
+      SHARD_0_URL: postgresql+psycopg://metascale:metascale@postgres-shard-0:5432/metascale
+      SHARD_1_URL: postgresql+psycopg://metascale:metascale@postgres-shard-1:5432/metascale
+      SHARD_2_URL: postgresql+psycopg://metascale:metascale@postgres-shard-2:5432/metascale
+      SHARD_3_URL: postgresql+psycopg://metascale:metascale@postgres-shard-3:5432/metascale
+      SHARD_4_URL: postgresql+psycopg://metascale:metascale@postgres-shard-4:5432/metascale
+      # ---- replication (Member 5): read/write split over real standbys
+      REPLICATION_ENABLED: ${REPLICATION_ENABLED:-false}
+      SHARD_0_REPLICA_URL: postgresql+psycopg://metascale:metascale@postgres-shard-0-replica:5432/metascale
+      SHARD_1_REPLICA_URL: postgresql+psycopg://metascale:metascale@postgres-shard-1-replica:5432/metascale
+      SHARD_2_REPLICA_URL: postgresql+psycopg://metascale:metascale@postgres-shard-2-replica:5432/metascale
+      SHARD_3_REPLICA_URL: postgresql+psycopg://metascale:metascale@postgres-shard-3-replica:5432/metascale
+      # ---- cache (Member 6): off unless CACHE_ENABLED=true
+      CACHE_ENABLED: ${CACHE_ENABLED:-false}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CACHE_DEFAULT_TTL: ${CACHE_DEFAULT_TTL:-60}
+      CACHE_HOT_KEY_THRESHOLD: ${CACHE_HOT_KEY_THRESHOLD:-5}
+      # ---- denormalization (Member 3) and feed (Member 7)
+      DENORMALIZED_ENABLED: ${DENORMALIZED_ENABLED:-false}
+      FEED_STRATEGY: ${FEED_STRATEGY:-pull}
+      # ---- messaging (Member 15): memory | rabbitmq | off
+      EVENT_BUS: ${EVENT_BUS:-memory}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://metascale:metascale@rabbitmq:5672/}
+      # ---- search (Member 10): memory | opensearch
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-memory}
+      OPENSEARCH_URL: ${OPENSEARCH_URL:-http://opensearch:9200}
+      # ---- media (Member 8): local | minio
+      MEDIA_BACKEND: ${MEDIA_BACKEND:-local}
+      MEDIA_ROOT: ${MEDIA_ROOT:-/var/media}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-metascale}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-metascaleminio}
+      MINIO_BUCKET: ${MINIO_BUCKET:-metascale-media}
+    ports:
+      - "8000:8000"
+    volumes:
+      - media_data:/var/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import httpx,sys; sys.exit(0 if httpx.get('http://localhost:8000/health', timeout=3).status_code==200 else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # ------------------------------------------- distributed cache (Member 6)
+  # Rebuildable, TTL-bound cache-aside over PostgreSQL. Losing the volume
+  # only causes cache misses, never data loss.
+  redis:
+    image: redis:7-alpine
+    profiles: ["cache", "distributed"]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_cache_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 3s
+
+  # ----------------------------------------------- messaging (Member 15)
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    profiles: ["messaging", "distributed"]
+    environment:
+      RABBITMQ_DEFAULT_USER: metascale
+      RABBITMQ_DEFAULT_PASS: metascale
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  # -------------------------------------------------- search (Member 10)
+  opensearch:
+    image: opensearchproject/opensearch:2.13.0
+    profiles: ["search", "distributed"]
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN_INSTALL: "true"
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms256m -Xmx256m"
+    ports:
+      - "9200:9200"
+
+  # --------------------------------------------------- media (Member 8)
+  minio:
+    image: minio/minio:latest
+    profiles: ["media", "storage", "distributed"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: metascale
+      MINIO_ROOT_PASSWORD: metascaleminio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  # ------------------------------------------ observability (Member 11)
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["observability", "distributed"]
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ["observability", "distributed"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3000:3000"
+
+volumes:
+  pg_canonical_data:
+  pg_shard0_data:
+  pg_shard1_data:
+  pg_shard2_data:
+  pg_shard3_data:
+  pg_shard4_data:
+  pg_shard0_replica_data:
+  pg_shard1_replica_data:
+  pg_shard2_replica_data:
+  pg_shard3_replica_data:
+  redis_cache_data:
+  media_data:

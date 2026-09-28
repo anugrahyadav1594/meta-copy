@@ -1,0 +1,128 @@
+{
+  "benchmark": "benchmark_consistent_hash",
+  "sample_size": 100000,
+  "fair_share_pct": 25.0,
+  "distribution_sweep": [
+    {
+      "virtual_nodes_per_shard": 1,
+      "total_ring_points": 4,
+      "percentages": {
+        "shard-0": 44.091,
+        "shard-1": 41.683,
+        "shard-2": 5.534,
+        "shard-3": 8.692
+      },
+      "spread_pp": 38.557,
+      "stdev_pp": 17.942
+    },
+    {
+      "virtual_nodes_per_shard": 5,
+      "total_ring_points": 20,
+      "percentages": {
+        "shard-0": 14.235,
+        "shard-1": 17.486,
+        "shard-2": 47.034,
+        "shard-3": 21.245
+      },
+      "spread_pp": 32.799,
+      "stdev_pp": 12.9609
+    },
+    {
+      "virtual_nodes_per_shard": 25,
+      "total_ring_points": 100,
+      "percentages": {
+        "shard-0": 25.498,
+        "shard-1": 24.984,
+        "shard-2": 23.144,
+        "shard-3": 26.374
+      },
+      "spread_pp": 3.23,
+      "stdev_pp": 1.1812
+    },
+    {
+      "virtual_nodes_per_shard": 50,
+      "total_ring_points": 200,
+      "percentages": {
+        "shard-0": 24.639,
+        "shard-1": 23.914,
+        "shard-2": 23.911,
+        "shard-3": 27.536
+      },
+      "spread_pp": 3.625,
+      "stdev_pp": 1.4939
+    },
+    {
+      "virtual_nodes_per_shard": 100,
+      "total_ring_points": 400,
+      "percentages": {
+        "shard-0": 24.275,
+        "shard-1": 25.647,
+        "shard-2": 23.214,
+        "shard-3": 26.864
+      },
+      "spread_pp": 3.65,
+      "stdev_pp": 1.3792
+    },
+    {
+      "virtual_nodes_per_shard": 150,
+      "total_ring_points": 600,
+      "percentages": {
+        "shard-0": 24.516,
+        "shard-1": 25.737,
+        "shard-2": 24.029,
+        "shard-3": 25.718
+      },
+      "spread_pp": 1.708,
+      "stdev_pp": 0.7476
+    },
+    {
+      "virtual_nodes_per_shard": 500,
+      "total_ring_points": 2000,
+      "percentages": {
+        "shard-0": 24.416,
+        "shard-1": 23.897,
+        "shard-2": 26.183,
+        "shard-3": 25.504
+      },
+      "spread_pp": 2.286,
+      "stdev_pp": 0.896
+    }
+  ],
+  "movement": [
+    {
+      "virtual_nodes_per_shard": 1,
+      "add_shard_pct_moved": 42.325,
+      "remove_shard_pct_restored": 100.0
+    },
+    {
+      "virtual_nodes_per_shard": 5,
+      "add_shard_pct_moved": 34.269,
+      "remove_shard_pct_restored": 100.0
+    },
+    {
+      "virtual_nodes_per_shard": 25,
+      "add_shard_pct_moved": 14.54,
+      "remove_shard_pct_restored": 100.0
+    },
+    {
+      "virtual_nodes_per_shard": 50,
+      "add_shard_pct_moved": 20.465,
+      "remove_shard_pct_restored": 100.0
+    },
+    {
+      "virtual_nodes_per_shard": 100,
+      "add_shard_pct_moved": 23.456,
+      "remove_shard_pct_restored": 100.0
+    },
+    {
+      "virtual_nodes_per_shard": 150,
+      "add_shard_pct_moved": 23.055,
+      "remove_shard_pct_restored": 100.0
+    },
+    {
+      "virtual_nodes_per_shard": 500,
+      "add_shard_pct_moved": 20.7,
+      "remove_shard_pct_restored": 100.0
+    }
+  ]
+}

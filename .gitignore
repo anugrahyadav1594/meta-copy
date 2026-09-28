@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / secrets — never commit
+.env
+.env.*
+!.env.example
+*.pgpass
+
+# Test / coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Local PostgreSQL data dirs (integration test clusters run without Docker)
+.pgdata/
+pgdata/
+
+# Benchmark results (runtime artifacts; samples in benchmarks/results/samples)
+benchmarks/results/raw/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
