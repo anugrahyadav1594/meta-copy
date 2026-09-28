@@ -112,7 +112,7 @@ placeholders: `messaging` (rabbitmq), `search` (opensearch), `storage`
 (minio), `observability` (prometheus, grafana). Examples:
 `docker compose --profile sharding up`,
 `docker compose --profile cache -f docker-compose.yml -f docker-compose.cache.yml up`.
-See [CACHE.md](CACHE.md) for the cache design and endpoints.
+See [CACHING.md](CACHING.md) for the cache design and endpoints.
 
 ## Troubleshooting
 

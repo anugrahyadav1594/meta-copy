@@ -7,6 +7,10 @@ what each member's original branch contributed.
 
 ## Integration rules (non-negotiable)
 
+0. **Member 9 is excluded from this iteration.** Its code is preserved under
+   `legacy/member9-graph/` for reference; relationships come from the canonical
+   `follows` table. No replacement graph module may be added.
+
 1. **PostgreSQL is the only source of truth.** Caches, indexes, projections
    and blob stores are derived and must be rebuildable.
 2. **Layering**: route → service → cache → repository → shard router →
@@ -26,17 +30,17 @@ what each member's original branch contributed.
 | Member | Module | Owns | Status after integration |
 |---|---|---|---|
 | 1 | Canonical database | `packages/models`, Alembic migrations, `infrastructure/postgres/init`, deterministic seed | IMPLEMENTED |
-| 2 | Query optimisation / EXPLAIN analysis | design credited; the MySQL + Streamlit tool is out of the runtime | FUTURE |
+| 2 | Query optimisation / indexes | schema indexes in `packages/models/*`; query *shape* measured live by `/api/v1/benchmarks/compare` (`normalized_read` vs `denormalized_read`) | PARTIAL — no standalone optimizer module exists in the repo |
 | 3 | Denormalization | `services/denormalization/`, `apps/api/routes/read_model.py` — event-driven `denormalized_post_feed`, rebuildable | IMPLEMENTED (Java/RabbitMQ worker superseded by the Python bus) |
 | 4 | Sharding | `services/shard-router/` — ring + vnodes, hash routing, registry, pooling, targeted/scatter/cross-shard, hot shards, online rebalance, checksums, health, metrics, benchmarks | IMPLEMENTED, preserved |
 | 5 | Replication | `services/replication/provider.py` — provider, read/write split, health + lag, promotion; compose standbys | IMPLEMENTED (compose replicas UNVERIFIED) |
 | 6 | Distributed cache | `services/cache/cache.py`, `apps/api/routes/cache.py` — cache-aside on `GET /posts/{id}`, TTL, invalidation, hot keys, fail-open | IMPLEMENTED |
 | 7 | Feed | `services/feed/service.py` — pull and fan-out-on-write, rebuildable push table | IMPLEMENTED |
 | 8 | Media | `services/media/` — SHA-256 CAS, `LocalBlobStore` / `MinioBlobStore`, metadata in PostgreSQL | IMPLEMENTED (MinIO OPTIONAL) |
-| 9 | Social graph | `services/graph/service.py` — rebuildable projection; SQLite removed | IMPLEMENTED (Node/SQLite service retired) |
+| 9 | Social graph | `legacy/member9-graph/` — ported adjacency projection, **EXCLUDED from the final integrated iteration** (not imported, not routed, no replacement written) | NOT INTEGRATED (by decision) |
 | 10 | Search | `services/search/` — `InMemorySearchProvider` (BM25) / `OpenSearchProvider`, autocomplete | IMPLEMENTED (OpenSearch OPTIONAL) |
 | 11 | Observability | `services/observability/`, `apps/api/routes/metrics.py` — `/metrics`, `/api/v1/metrics`, P50/P95/P99 | IMPLEMENTED |
-| 12 | Benchmarks | `benchmarks/unified_benchmark.py` (A–F) and `benchmarks/sharding/*` | IMPLEMENTED |
+| 12 | Benchmarks **and system integration** | `benchmarks/unified_benchmark.py` (A–F), `benchmarks/sharding/*`, `scripts/demo.py`, `scripts/demo_server.py`, integration API (`/api/v1/benchmarks`, `/database`, `/events`, `/observability`, `/health`), docs, `frontend/` | IMPLEMENTED (integration owner, not a separate subsystem) |
 | 15 | Events | `packages/events/` — `DomainEvent`, `EventBus`, `InMemory` / `RabbitMQ` / `Null` | IMPLEMENTED (RabbitMQ OPTIONAL) |
 | 16 | Deployment | `docker-compose.yml` (one file, seven profiles) | IMPLEMENTED, UNVERIFIED |
 | 17 | API surface | `apps/api/routes/` — 77 endpoints under `/api/v1` | IMPLEMENTED |

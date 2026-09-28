@@ -15,6 +15,68 @@ graph/feed/media/search projections, and observability.
 > infrastructure. Architecture components are described as **Meta-inspired**,
 > **TAO-inspired**, or **Haystack-inspired** where applicable.
 
+**This repository now holds the complete integrated system** — every member
+module composed into one FastAPI application, one event contract, one compose
+file and one frontend. See [docs/INTEGRATION_AUDIT.md](docs/INTEGRATION_AUDIT.md)
+for the full member-by-member audit and [docs/FINAL_DEMO.md](docs/FINAL_DEMO.md)
+for how to run the demo.
+
+## Final integrated system (current state)
+
+```text
+Client (Architecture Control Center, React + TS)
+  -> FastAPI  /api/v1
+  -> Service layer            business rules, domain events
+  -> Cache adapter (M6)       Redis cache-aside, above the repository
+  -> Repository               canonical | sharded
+  -> Shard Router (M4)        consistent hashing, virtual nodes, rebalance
+  -> Replication provider (M5) primary / replica inside a shard
+  -> PostgreSQL               SOURCE OF TRUTH (canonical + shards)
+
+Derived, rebuildable projections hang off the event bus:
+  denormalized read model (M3) · feed (M7) · media metadata (M8) · search (M10)
+```
+
+| Piece | Where |
+| --- | --- |
+| One API, 87 endpoints under `/api/v1` | `apps/api/`, contract in [docs/API_CONTRACT.md](docs/API_CONTRACT.md) |
+| Health across API + PostgreSQL + shards + Redis + RabbitMQ + OpenSearch + MinIO | `GET /api/v1/health` → `healthy \| degraded \| unavailable` |
+| Live database change stream (operation/table/key/shard/before/after) | `GET /api/v1/database/changes`, [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) |
+| One event contract, two real transports | `GET /api/v1/events`, [docs/EVENTS.md](docs/EVENTS.md) |
+| Live benchmarks (no hard-coded numbers) | `GET /api/v1/benchmarks/*`, [docs/BENCHMARKING.md](docs/BENCHMARKING.md) |
+| Architecture Control Center (dashboard / observability / benchmarks) | `frontend/`, [docs/FRONTEND_DEMO.md](docs/FRONTEND_DEMO.md) |
+| Member 9 (graph) | **excluded this iteration** — reference copy in `legacy/member9-graph/` |
+
+### Run the whole thing
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -e ".[dev]" -r requirements.txt     # or: make install
+
+make test                 # 141 tests against real PostgreSQL clusters
+make dev-full             # API, FULL_DISTRIBUTED: http://localhost:8000/docs
+make frontend             # UI:  http://localhost:5173/dashboard   (second shell)
+make demo-full            # or a one-command 20-step scripted demo
+```
+
+With Docker: `MODE=FULL_DISTRIBUTED CACHE_ENABLED=true DENORMALIZED_ENABLED=true
+docker compose --profile distributed --profile observability up -d --build`.
+
+### Documentation
+
+| Document | Purpose |
+| --- | --- |
+| [docs/INTEGRATION_AUDIT.md](docs/INTEGRATION_AUDIT.md) | member → module → status → integration work → final API |
+| [docs/FINAL_DEMO.md](docs/FINAL_DEMO.md) | how to run and present the demo |
+| [docs/PRESENTATION_GUIDE.md](docs/PRESENTATION_GUIDE.md) | per-member: problem, concept, demo, trade-offs, what NOT to claim |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/architecture.md](docs/architecture.md) | layered design and Mermaid diagrams |
+| [docs/API_CONTRACT.md](docs/API_CONTRACT.md) | every endpoint, generated from OpenAPI |
+| [docs/EVENTS.md](docs/EVENTS.md) · [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) · [docs/SHARDING.md](docs/SHARDING.md) · [docs/REPLICATION.md](docs/REPLICATION.md) · [docs/CACHING.md](docs/CACHING.md) · [docs/DENORMALIZATION.md](docs/DENORMALIZATION.md) · [docs/BENCHMARKING.md](docs/BENCHMARKING.md) · [docs/FRONTEND_DEMO.md](docs/FRONTEND_DEMO.md) | per-subsystem detail |
+
+---
+
+## Earlier milestones (foundation + Member 4)
+
 This milestone ships:
 
 1. The **shared foundation** every team member builds on — one canonical
@@ -108,11 +170,22 @@ metascale/
 ├── infrastructure/postgres/  init SQL (canonical) + generated per-shard DDL
 ├── migrations/               Alembic
 ├── scripts/                  seed, reset, healthcheck, initialize_shards, dev_server
-├── benchmarks/sharding/      hash, consistent-hash, and A–E scaling benchmarks
+├── services/                 member modules: cache (M6), denormalization (M3),
+│                             feed (M7), media (M8), replication (M5),
+│                             search (M10), observability (M11)
+│   └── shard-router/         Member 4: router, metadata, health, queries,
+│                             rebalance, hotspots, metrics
+├── frontend/                 Architecture Control Center (React + TS + Vite)
+├── legacy/member9-graph/     Member 9: EXCLUDED this iteration, reference only
+├── benchmarks/               unified A–F benchmark + sharding benchmarks
 ├── tests/                    unit / integration / contract (+ embedded PG)
-├── docs/                     ARCHITECTURE, DATABASE_SCHEMA, API_CONTRACT,
-│                             SHARDING, MODULE_OWNERS, DEVELOPMENT
-└── docker-compose.yml        canonical + 5 shard containers + future placeholders
+├── docs/                     INTEGRATION_AUDIT, FINAL_DEMO, PRESENTATION_GUIDE,
+│                             ARCHITECTURE, architecture (Mermaid), API_CONTRACT,
+│                             EVENTS, DATABASE_DESIGN, SHARDING, REPLICATION,
+│                             CACHING, DENORMALIZATION, BENCHMARKING,
+│                             FRONTEND_DEMO, MODULE_OWNERS, DEVELOPMENT
+└── docker-compose.yml        profiles: core (always on) · distributed ·
+                              observability (+ fine-grained per-backend)
 ```
 
 ---
@@ -154,6 +227,21 @@ python scripts/dev_server.py --sharded --seed small --sharded-seed --reset
 
 The test suite uses the same mechanism, so sharding is exercised against real
 PostgreSQL everywhere, never mocks.
+
+### Architecture Control Center (frontend)
+
+```bash
+make frontend          # npm install + Vite dev server on :5173 (proxies /api)
+# open http://localhost:5173/dashboard
+make frontend-build    # build to frontend/dist, served by the API at /dashboard
+```
+
+The UI shows the live request path (request → service → cache → shard router →
+database → event → derived), the database change stream, the shard map, cache
+hits and misses, the denormalized side-by-side, real benchmarks and the
+observability metrics. Simulated subsystems are labelled `SIMULATED`, and
+concept-inspired ones `INSPIRED BY` — see
+[docs/FRONTEND_DEMO.md](docs/FRONTEND_DEMO.md).
 
 ---
 
@@ -257,13 +345,22 @@ Structured errors never leak SQL, stack traces, or credentials, e.g.
 See [`docs/MODULE_OWNERS.md`](docs/MODULE_OWNERS.md). In short:
 
 - **Member 1** owns the canonical schema, normalization, migrations, seed data.
-- **Member 4 (this repo's implemented module)** owns shard routing, the
-  registry, connection management, scatter-gather, cross-shard assembly,
-  hot-shard detection, rebalancing, and sharding benchmarks.
-- **Member 5** will choose the *replica* **inside** the shard Member 4 chose
-  (the `ShardConnectionProvider` seam).
-- **Member 6** will add Redis cache-aside **above** the repository (the
+- **Member 2** owns query-shape/index work; indexes live in the schema and the
+  effect is measured, not asserted.
+- **Member 3** owns the denormalized read model (a rebuildable projection).
+- **Member 4** owns shard routing, the registry, connection management,
+  scatter-gather, cross-shard assembly, hot-shard detection, rebalancing and
+  sharding benchmarks.
+- **Member 5** chooses the *replica* **inside** the shard Member 4 chose (the
+  `ShardConnectionProvider` seam).
+- **Member 6** owns Redis cache-aside **above** the repository (the
   `CacheProvider` seam); the router never knows a cache exists.
+- **Members 7, 8, 10, 11** own feed, media, search and observability — all
+  derived systems fed by the event bus.
+- **Member 9** is **excluded from this iteration** (reference copy in
+  `legacy/member9-graph/`); relationships are read from `follows`.
+- **Member 12** owns benchmarking **and** system integration (one app, one
+  contract, one compose file, docs, UI).
 
 Future members integrate strictly through the interfaces in
 `packages/db/repositories/base.py` and `packages/events/contracts.py` and must

@@ -54,7 +54,7 @@ rebuildable:
 | --- | --- | --- | --- |
 | `denormalized_post_feed` | Member 3 | event projector | `POST /api/v1/read-model/rebuild` |
 | `user_feed` (fan-out) | Member 7 | event projector | `POST /api/v1/feed/rebuild` |
-| Social graph adjacency | Member 9 | lazy read + TTL cache | `POST /api/v1/graph/rebuild` |
+| Social graph adjacency | Member 9 | **EXCLUDED this iteration** (`legacy/member9-graph/`); relationships are read from the canonical `follows` table | `GET /api/v1/users/{id}/followers`, `/following` |
 | Search index | Member 10 | events + full reindex | `POST /api/v1/search/reindex` |
 | Media blobs | Member 8 | upload (CAS by SHA-256) | re-upload; metadata stays canonical |
 
@@ -95,7 +95,7 @@ GET /api/v1/users/{id}/feed
   push: read the derived user_feed table (empty for followers added
         after the write; /api/v1/feed/rebuild fixes it)
 
-GET /api/v1/graph/users/{id}/followers
+GET /api/v1/users/{id}/followers   # canonical follows table (no graph store)
   → rebuildable adjacency cache over the follows table (TTL 30s)
 ```
 

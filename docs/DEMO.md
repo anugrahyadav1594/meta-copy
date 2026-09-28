@@ -96,18 +96,21 @@ content. Log line: `cache_invalidated key=post:380100902570164227`.
 `{"created": true}` the first time, `{"created": false}` on repeat; the
 `FOLLOW_CREATED` domain event is published only for a genuinely new edge.
 
-## Step 14 — Social graph, derived (`GET /api/v1/graph/...`)
+## Step 14 — Follow relationships (canonical `follows` table)
 
-`followers`, `following`, `mutuals/{other_id}`, `degrees`, `suggestions` are
-served from a **rebuildable adjacency projection**. `GET /api/v1/graph/stats`
-states it plainly:
+`followers` and `following` are read from the **canonical `follows` table**.
+There is no separate graph store in this iteration: Member 9's graph projection
+is excluded from the integrated system and preserved under
+`legacy/member9-graph/`.
 
-```json
-{"derived_projection": true, "source_of_truth": "postgresql:follows", ...}
+```bash
+GET /api/v1/users/{id}/followers   # -> [{"follower_id": …, "following_id": …, "created_at": …}]
+GET /api/v1/users/{id}/following
 ```
 
-No SQLite, no second store: `POST /api/v1/graph/rebuild` recomputes
-everything from the `follows` table.
+Relationships are plain rows scattered over the shards, so the endpoint
+scatter-gathers like any other unkeyed read. Nothing is precomputed, and there
+is no second store to fall out of sync with PostgreSQL.
 
 ## Step 15 — Feed: pull vs fan-out-on-write (`GET /api/v1/users/{id}/feed`)
 

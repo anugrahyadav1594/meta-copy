@@ -2,7 +2,17 @@
 #
 # A laptop does not have to run everything. Choose a profile:
 #
-#   docker compose up                       # canonical PostgreSQL + API (NORMALIZED)
+# PROFILE GROUPS (three, as required by the integration contract):
+#   core            = canonical PostgreSQL + API, ALWAYS ON (no flag needed)
+#   distributed     = + shards, replicas, cache, messaging, search, media
+#   observability   = + Prometheus + Grafana
+#
+#   docker compose up                            # core only (NORMALIZED)
+#   docker compose --profile distributed up      # + every distributed backend
+#   docker compose --profile observability up    # + metrics stack
+#   docker compose --profile distributed --profile observability up
+#
+# Fine-grained profiles are kept for laptops that only want one backend:
 #   docker compose --profile sharding up    # + 4 independent shards (+1 spare)
 #   docker compose --profile cache up       # + Redis (cache-aside, rebuildable)
 #   docker compose --profile messaging up   # + RabbitMQ (domain events)

@@ -35,6 +35,10 @@ pgdata/
 # Benchmark results (runtime artifacts; samples in benchmarks/results/samples)
 benchmarks/results/raw/
 
+# Node / frontend
+node_modules/
+frontend/dist/
+
 # Editor / OS
 .idea/
 .vscode/

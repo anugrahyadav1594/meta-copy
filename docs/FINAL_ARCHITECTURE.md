@@ -1,3 +1,12 @@
+> **Update — Member 9 is EXCLUDED from the final integrated iteration.**
+> The TAO-inspired graph projection is no longer wired into the system: its code
+> is preserved verbatim under `legacy/member9-graph/` for reference, it is not
+> imported, and `/api/v1/graph/*` no longer exists. Relationships are read from
+> the canonical `follows` table (`GET /api/v1/users/{id}/followers`,
+> `/following`). The authoritative status table is
+> [INTEGRATION_AUDIT.md](INTEGRATION_AUDIT.md); this document is kept for the
+> historical record of the integration work.
+
 # FINAL ARCHITECTURE — MetaScale, the integrated system
 
 Status: integrated, running, and verified end to end. This document

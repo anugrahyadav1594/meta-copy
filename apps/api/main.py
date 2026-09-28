@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from common.config import Settings, get_settings
@@ -173,6 +174,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # GET /api/v1/health — aggregate dependency health (healthy|degraded|unavailable)
     app.include_router(health_v1_router)
 
+    # ------------------------------------------------- built frontend (optional)
+    # When `npm run build` has produced frontend/dist, the Architecture Control
+    # Center is served from this same origin — no CORS, no second port. The API
+    # routes declared above always win, so mounting last is safe.
+    dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    if (dist / "index.html").exists():
+        from fastapi.staticfiles import StaticFiles
+
+        for route in ("/dashboard", "/observability", "/benchmarks"):
+            app.mount(
+                route,
+                StaticFiles(directory=str(dist), html=True),
+                name=f"ui{route.replace('/', '-')}",
+            )
+        # The bundle is referenced with absolute paths from every page, so the
+        # asset directory needs its own mount.
+        app.mount(
+            "/assets",
+            StaticFiles(directory=str(dist / "assets")),
+            name="ui-assets",
+        )
+
     @app.get("/", include_in_schema=False)
     async def root() -> dict[str, str]:
         return {
@@ -184,6 +207,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "health": "/health",
             "ready": "/ready",
             "api_health": f"{settings.api_v1_prefix}/health",
+            "dashboard": "/dashboard",
         }
 
     return app

@@ -8,7 +8,7 @@ export DOCKER_BUILDKIT := 1
 
 .PHONY: help install up down reset sharding cache messaging search media observability \
         replication distributed dev-cache dev-full seed seed-small seed-medium seed-large \
-        demo benchmark-unified compose-config \
+        demo demo-full benchmark-unified compose-config frontend frontend-build \
         shard-seed shard-init api test test-unit test-integration lint format \
         benchmark benchmark-routing benchmark-db health migrate logs
 
@@ -143,6 +143,17 @@ benchmark-db:  ## DB-backed scaling scenarios A-E (embedded PG or SHARD_n_URL)
 
 demo:  ## Run the 20-step live demo against a running API
 	$(PYTHON) scripts/demo.py --base-url $(or $(BASE_URL),http://localhost:8000)
+
+demo-full:  ## One command: start SHARDED+CACHE API, run the demo, then stop it
+	MODE=SHARDED_CACHED CACHE_ENABLED=true REDIS_URL=memory:// DENORMALIZED_ENABLED=true \
+		$(PYTHON) scripts/demo_server.py --port 8000 --seed small --wait 25 -- \
+		$(PYTHON) scripts/demo.py --base-url http://localhost:8000
+
+frontend:  ## Architecture Control Center (Vite dev server on :5173, proxies /api)
+	cd frontend && npm install && npm run dev
+
+frontend-build:  ## Build the Control Center into frontend/dist (served by the API)
+	cd frontend && npm install && npm run build
 
 benchmark-unified:  ## Unified A-F comparison (JSON + CSV in benchmarks/results)
 	$(PYTHON) benchmarks/unified_benchmark.py

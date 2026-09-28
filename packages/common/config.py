@@ -21,7 +21,7 @@ import os
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from common.enums import DeploymentMode, RoutingStrategy
@@ -137,6 +137,10 @@ class Settings(BaseSettings):
     changes_enabled: bool = True
     change_log_capacity: int = 1_000
 
+    # Accepted alias of ``event_bus`` (the integration contract names it
+    # EVENT_BUS_BACKEND); EVENT_BUS wins when both are set.
+    event_bus_backend: str | None = None
+
     # Member 9 / graph is EXCLUDED from this iteration (legacy/member9-graph/).
     # These knobs are kept so the exclusion is visible in configuration too;
     # nothing in the running system reads them.
@@ -181,6 +185,15 @@ class Settings(BaseSettings):
     @classmethod
     def _lower_choice(cls, v: Any) -> Any:
         return v.lower() if isinstance(v, str) else v
+
+    @model_validator(mode="after")
+    def _resolve_event_bus_alias(self) -> Settings:
+        """EVENT_BUS_BACKEND is an alias of EVENT_BUS (integration contract)."""
+        alias = (self.event_bus_backend or "").strip().lower()
+        current = (self.event_bus or "").strip().lower()
+        if alias and (not current or current == "memory"):
+            object.__setattr__(self, "event_bus", alias)
+        return self
 
     # ------------------------------------------------------------ derived
     @property

@@ -1,4 +1,6 @@
-# Distributed cache (Member 6)
+# Caching (Member 6)
+
+(formerly `docs/CACHE.md` — renamed for the integration contract.)
 
 Redis **cache-aside** in front of the post read path. The cache sits **above**
 the repository and shard router; neither knows it exists. PostgreSQL remains
