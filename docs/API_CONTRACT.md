@@ -1,6 +1,6 @@
 # API Contract — MetaScale integrated system
 
-Single FastAPI application, single versioned prefix: **`/api/v1`**.
+Single FastAPI application, single versioned prefix: **`/api/v1`**, 96 endpoints.
 This file is generated from the running service's OpenAPI document
 (`GET /openapi.json`) plus the conventions that OpenAPI cannot express.
 
@@ -48,6 +48,9 @@ classifies each component as `healthy`, `degraded` or `unavailable`:
   `GET /api/v1/cache/health`
   `GET /api/v1/cache/keys`
   `GET /api/v1/cache/metrics`
+**/api/v1/comments**
+  `GET /api/v1/comments`
+  `GET /api/v1/comments/counts`
 **/api/v1/database**
   `DELETE /api/v1/database/changes`
   `GET /api/v1/database/changes`
@@ -63,8 +66,17 @@ classifies each component as `healthy`, `degraded` or `unavailable`:
   `GET /api/v1/feed/stats`
   `GET /api/v1/feed/strategies`
   `POST /api/v1/feed/rebuild`
+**/api/v1/follows**
+  `DELETE /api/v1/follows/{follower_id}/{following_id}`
+  `GET /api/v1/follows`
+  `GET /api/v1/follows/check`
+  `GET /api/v1/follows/counts`
 **/api/v1/health**
   `GET /api/v1/health`
+**/api/v1/likes**
+  `DELETE /api/v1/likes/{post_id}/{user_id}`
+  `GET /api/v1/likes`
+  `GET /api/v1/likes/counts`
 **/api/v1/media**
   `DELETE /api/v1/media/{media_id}`
   `GET /api/v1/media/`

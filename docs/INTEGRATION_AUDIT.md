@@ -105,7 +105,7 @@ all are fixed and covered by a test.
 
 | Check | Result |
 | --- | --- |
-| `pytest tests services/shard-router/tests services/cache/tests` | **141 passed** (real PostgreSQL 16 clusters, no mocks) |
+| `pytest tests services/shard-router/tests services/cache/tests` | **142 passed** (real PostgreSQL 16 clusters, no mocks) |
 | `ruff check .` / `black --check .` | clean (135 files; `legacy/` excluded on purpose) |
 | `make demo` (20 steps, `FULL_DISTRIBUTED`) | **20/20** |
 | `make demo-full` (`SHARDED_CACHED`, self-started API) | **20/20**, exit 0 |

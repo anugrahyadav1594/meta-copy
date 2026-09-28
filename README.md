@@ -39,7 +39,7 @@ Derived, rebuildable projections hang off the event bus:
 
 | Piece | Where |
 | --- | --- |
-| One API, 87 endpoints under `/api/v1` | `apps/api/`, contract in [docs/API_CONTRACT.md](docs/API_CONTRACT.md) |
+| One API, 96 endpoints under `/api/v1` | `apps/api/`, contract in [docs/API_CONTRACT.md](docs/API_CONTRACT.md) |
 | Health across API + PostgreSQL + shards + Redis + RabbitMQ + OpenSearch + MinIO | `GET /api/v1/health` → `healthy \| degraded \| unavailable` |
 | Live database change stream (operation/table/key/shard/before/after) | `GET /api/v1/database/changes`, [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) |
 | One event contract, two real transports | `GET /api/v1/events`, [docs/EVENTS.md](docs/EVENTS.md) |

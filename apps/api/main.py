@@ -26,6 +26,9 @@ TAGS = [
     {"name": "system", "description": "Liveness/readiness"},
     {"name": "users", "description": "Canonical user API (mode-aware)"},
     {"name": "posts", "description": "Canonical post/comment API (mode-aware)"},
+    {"name": "comments", "description": "Comments as a first-class resource (read/delete)"},
+    {"name": "likes", "description": "Likes as a first-class resource (read/delete)"},
+    {"name": "follows", "description": "Follow edges as a first-class resource (read/delete)"},
     {"name": "sharding", "description": "Shard admin and sharded data endpoints (Member 4)"},
     {"name": "replication", "description": "Primary/replica routing + failover (Member 5)"},
     {"name": "cache", "description": "Redis cache-aside status and metrics (Member 6)"},
@@ -141,6 +144,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from api.routes.feed import router as feed_router
     from api.routes.health import router as health_router
     from api.routes.health import v1_router as health_v1_router
+    from api.routes.interactions import (
+        comments_router,
+        follows_router,
+        likes_router,
+    )
     from api.routes.media import router as media_router
     from api.routes.metrics import prometheus_router
     from api.routes.metrics import router as metrics_router
@@ -158,6 +166,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(users_router, prefix=settings.api_v1_prefix)
     app.include_router(posts_router, prefix=settings.api_v1_prefix)
+    # Resource-oriented aliases required by the integration contract.
+    app.include_router(comments_router, prefix=settings.api_v1_prefix)
+    app.include_router(likes_router, prefix=settings.api_v1_prefix)
+    app.include_router(follows_router, prefix=settings.api_v1_prefix)
     app.include_router(feed_router, prefix=settings.api_v1_prefix)
     app.include_router(read_model_router, prefix=settings.api_v1_prefix)
     app.include_router(media_router, prefix=settings.api_v1_prefix)

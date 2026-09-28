@@ -261,3 +261,65 @@ async def test_benchmarks_are_measured_not_hardcoded(app_and_platform) -> None:
 
         catalogue = (await client.get("/api/v1/benchmarks/architectures")).json()
         assert [a["id"] for a in catalogue["architectures"]] == list("ABCDEF")
+
+
+async def test_resource_aliases_for_comments_likes_follows(app_and_platform) -> None:
+    """comments / likes / follows are addressable as their own resources."""
+    app, _settings, _platform = app_and_platform
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        alice = await _make_user(client, "res_alice")
+        bob = await _make_user(client, "res_bob")
+        post = (
+            await client.post(
+                "/api/v1/posts",
+                json={"user_id": alice, "content": "resource aliases", "visibility": "public"},
+            )
+        ).json()
+        post_id = post["post_id"]
+
+        await client.post(
+            f"/api/v1/posts/{post_id}/comments", json={"user_id": bob, "content": "hi"}
+        )
+        await client.post(f"/api/v1/posts/{post_id}/like", json={"user_id": bob})
+        await client.post(f"/api/v1/users/{bob}/follow", json={"following_id": alice})
+
+        comments = (await client.get(f"/api/v1/comments?post_id={post_id}")).json()
+        assert [c["content"] for c in comments] == ["hi"]
+        counts = (await client.get(f"/api/v1/comments/counts?post_id={post_id}")).json()
+        assert counts["comment_count"] == 1
+
+        likes = (await client.get(f"/api/v1/likes?post_id={post_id}")).json()
+        assert likes["count"] == 1
+        assert likes["items"][0]["user_id"] == bob
+        assert (await client.get(f"/api/v1/likes/counts?post_id={post_id}")).json()[
+            "like_count"
+        ] == 1
+
+        following = (await client.get(f"/api/v1/follows?user_id={bob}&direction=following")).json()
+        assert [f["following_id"] for f in following] == [alice]
+        followers = (
+            await client.get(f"/api/v1/follows?user_id={alice}&direction=followers")
+        ).json()
+        assert [f["follower_id"] for f in followers] == [bob]
+        assert (await client.get(f"/api/v1/follows/counts?user_id={alice}")).json() == {
+            "user_id": alice,
+            "followers": 1,
+            "following": 0,
+        }
+        check = (
+            await client.get(f"/api/v1/follows/check?follower_id={bob}&following_id={alice}")
+        ).json()
+        assert check["is_following"] is True
+
+        # deleting through the resource alias publishes the same event
+        await client.delete(f"/api/v1/likes/{post_id}/{bob}")
+        assert (await client.get(f"/api/v1/likes/counts?post_id={post_id}")).json()[
+            "like_count"
+        ] == 0
+        await client.delete(f"/api/v1/follows/{bob}/{alice}")
+        assert (await client.get(f"/api/v1/follows/counts?user_id={alice}")).json()[
+            "followers"
+        ] == 0
+        recent = (await client.get("/api/v1/events/recent?limit=20")).json()
+        types = {e["event_type"] for e in recent["events"]}
+        assert {"LIKE_DELETED", "FOLLOW_DELETED"} <= types
