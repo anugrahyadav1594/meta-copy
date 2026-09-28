@@ -42,12 +42,8 @@ async def metrics(platform: Platform = Depends(get_platform)) -> dict[str, Any]:
         REGISTRY.set_gauge("cache_hits", cache_stats.get("cache_hits", 0))
         REGISTRY.set_gauge("cache_misses", cache_stats.get("cache_misses", 0))
         REGISTRY.set_gauge("cache_errors", cache_stats.get("cache_errors", 0))
-        REGISTRY.set_gauge(
-            "cache_invalidations", cache_stats.get("cache_invalidations", 0)
-        )
-        REGISTRY.set_gauge(
-            "db_queries_avoided", cache_stats.get("db_queries_avoided", 0)
-        )
+        REGISTRY.set_gauge("cache_invalidations", cache_stats.get("cache_invalidations", 0))
+        REGISTRY.set_gauge("db_queries_avoided", cache_stats.get("db_queries_avoided", 0))
     if platform.metrics is not None:
         shard_snapshot = platform.metrics.snapshot(platform.registry)
         snapshot["sharding"] = shard_snapshot

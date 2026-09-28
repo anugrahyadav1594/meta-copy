@@ -88,9 +88,7 @@ async def _probe_opensearch(platform: Platform) -> str:
 async def _probe_minio(platform: Platform) -> str:
     store = getattr(platform.media_service, "blobs", None) if platform.media_service else None
     if store is None or getattr(store, "backend", "local") != "minio":
-        media_backend = (
-            getattr(store, "backend", None) if store is not None else "local"
-        )
+        media_backend = getattr(store, "backend", None) if store is not None else "local"
         return f"disabled (media_backend={media_backend})"
 
     async def head() -> bool:

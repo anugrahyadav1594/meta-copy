@@ -82,11 +82,7 @@ def main() -> None:
         # richer mode the operator asked for (SHARDED_CACHED,
         # SHARDED_REPLICATED, FULL_DISTRIBUTED ...).
         explicit = (os.environ.get("MODE") or "").upper()
-        os.environ["MODE"] = (
-            explicit
-            if explicit in SHARDED_MODE_NAMES
-            else "SHARDED"
-        )
+        os.environ["MODE"] = explicit if explicit in SHARDED_MODE_NAMES else "SHARDED"
         os.environ["SHARDING_ENABLED"] = "true"
         os.environ["SHARD_COUNT"] = "4"
         os.environ["SHARDING_STRATEGY"] = args.strategy

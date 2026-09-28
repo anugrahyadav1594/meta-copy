@@ -366,10 +366,9 @@ async def test_shard_list_serialises_row_counts_as_integers(infra, clean) -> Non
     storing the tuple instead of the total made ``GET /api/v1/shards`` fail
     FastAPI response validation.
     """
-    from httpx import ASGITransport, AsyncClient
-
     from api.main import create_app
     from common.config import Settings
+    from httpx import ASGITransport, AsyncClient
 
     settings_obj, _clusters, urls = infra
     settings = Settings(
@@ -390,9 +389,7 @@ async def test_shard_list_serialises_row_counts_as_integers(infra, clean) -> Non
     platform = get_platform()
     await platform.start()
     try:
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             res = await client.get("/api/v1/shards")
             assert res.status_code == 200, res.text
             for shard in res.json()["shards"]:

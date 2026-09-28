@@ -52,10 +52,11 @@ import random
 import statistics
 import sys
 import time
+from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Coroutine
+from typing import Any
 
 _ROOT = Path(__file__).resolve().parents[1]
 for p in (
@@ -68,6 +69,7 @@ for p in (
         sys.path.insert(0, str(p))
 
 from common.config import Settings  # noqa: E402
+
 from tests.support.pgclusters import PgClusters  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -234,10 +236,8 @@ class Workload:
 
 async def _reset_databases(platform: Any, urls: dict[str, str], canonical: str) -> None:
     """Drop and recreate the schema everywhere for a clean, fair run."""
-    from sqlalchemy import text
-    from sqlalchemy.ext.asyncio import create_async_engine
-
     from models import Base
+    from sqlalchemy.ext.asyncio import create_async_engine
 
     async def reset(url: str) -> None:
         engine = create_async_engine(url)
@@ -299,17 +299,13 @@ async def run_workload(
 
     for _ in range(wl.follows):
         follower, following = rng.sample(user_ids, 2)
-        await recorder.measure(
-            "write_follow", platform.follow_repo.add_follow(follower, following)
-        )
+        await recorder.measure("write_follow", platform.follow_repo.add_follow(follower, following))
 
     for _ in range(wl.likes):
         post_id = rng.choice(post_ids)
         user_id = rng.choice(user_ids)
         try:
-            await recorder.measure(
-                "write_like", platform.like_repo.add(post_id, user_id)
-            )
+            await recorder.measure("write_like", platform.like_repo.add(post_id, user_id))
         except Exception:  # duplicate like: the UNIQUE constraint is the point
             pass
 
@@ -319,9 +315,7 @@ async def run_workload(
         try:
             await recorder.measure(
                 "write_comment",
-                posts.comment(
-                    post_id, CommentCreate(user_id=user_id, content="benchmark comment")
-                ),
+                posts.comment(post_id, CommentCreate(user_id=user_id, content="benchmark comment")),
             )
         except Exception:
             pass
@@ -334,24 +328,18 @@ async def run_workload(
 
     for _ in range(wl.read_feed):
         user_id = rng.choice(user_ids)
-        await recorder.measure(
-            "read_feed", platform.feed_service.get_feed(user_id, limit=20)
-        )
+        await recorder.measure("read_feed", platform.feed_service.get_feed(user_id, limit=20))
 
     for _ in range(wl.read_graph):
         user_id = rng.choice(user_ids)
-        await recorder.measure(
-            "read_graph", platform.graph.followers(user_id, limit=100)
-        )
+        await recorder.measure("read_graph", platform.graph.followers(user_id, limit=100))
 
     # the index is derived: build it, then query it
     if platform.search_indexer is not None:
         await platform.search_indexer.rebuild()
     for i in range(wl.read_search):
         term = CONTENT_WORDS[i % len(CONTENT_WORDS)]
-        await recorder.measure(
-            "read_search", platform.search_indexer.search(term, limit=20)
-        )
+        await recorder.measure("read_search", platform.search_indexer.search(term, limit=20))
 
     return {"users": len(user_ids), "posts": len(post_ids)}
 
@@ -470,8 +458,9 @@ def _console_report(results: list[dict[str, Any]]) -> str:
     lines.append("MetaScale unified benchmark — measured on real PostgreSQL")
     lines.append("=" * 100)
 
-    operations = sorted({op["operation"] for r in results for op in r["operations"]})
-    header = f"{'config':<22}{'op':<16}{'n':>6}{'p50 ms':>10}{'p95 ms':>10}{'p99 ms':>10}{'ops/s':>10}"
+    header = (
+        f"{'config':<22}{'op':<16}{'n':>6}{'p50 ms':>10}{'p95 ms':>10}{'p99 ms':>10}{'ops/s':>10}"
+    )
     lines.append(header)
     lines.append("-" * len(header))
     for r in results:
@@ -492,7 +481,9 @@ def _console_report(results: list[dict[str, Any]]) -> str:
         bits = []
         if "cache" in counters:
             c = counters["cache"]
-            bits.append(f"cache hits={c['cache_hits']} misses={c['cache_misses']} ratio={c['hit_ratio']}%")
+            bits.append(
+                f"cache hits={c['cache_hits']} misses={c['cache_misses']} ratio={c['hit_ratio']}%"
+            )
         if "events" in counters:
             e = counters["events"]
             bits.append(f"events published={e['published']} delivered={e['delivered']}")
@@ -598,7 +589,10 @@ async def _main(args: argparse.Namespace) -> int:
     clusters: PgClusters | None = None
     if not urls:
         print("starting 5 local PostgreSQL 16 clusters (canonical + 4 shards) ...")
-        clusters = PgClusters(_ROOT / ".pgdata" / "benchmark", ["canonical", "shard-0", "shard-1", "shard-2", "shard-3"])
+        clusters = PgClusters(
+            _ROOT / ".pgdata" / "benchmark",
+            ["canonical", "shard-0", "shard-1", "shard-2", "shard-3"],
+        )
         uris = clusters.start()
         await clusters.create_schema()
         urls = {k: v for k, v in uris.items() if k.startswith("shard-")}

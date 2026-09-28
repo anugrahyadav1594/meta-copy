@@ -179,9 +179,7 @@ class Demo:
         )
         self.ids["post"] = post["post_id"]
         self.show("post_id", post["post_id"])
-        self.show(
-            "hashtags", self.call("GET", f"/api/v1/posts/{post['post_id']}/hashtags")
-        )
+        self.show("hashtags", self.call("GET", f"/api/v1/posts/{post['post_id']}/hashtags"))
         time.sleep(self.pause)
 
         # 6 ------------------------------------------------------------------
@@ -249,9 +247,7 @@ class Demo:
         # 12 ------------------------------------------------------------------
         self.title("Read the counters back from PostgreSQL")
         self.show("likes", self.call("GET", f"/api/v1/posts/{self.ids['post']}/likes"))
-        self.show(
-            "comments", self.call("GET", f"/api/v1/posts/{self.ids['post']}/comments")
-        )
+        self.show("comments", self.call("GET", f"/api/v1/posts/{self.ids['post']}/comments"))
         time.sleep(self.pause)
 
         # 13 ------------------------------------------------------------------
@@ -352,7 +348,7 @@ class Demo:
         def upload(filename: str) -> bytes:
             parts = [
                 f"--{boundary}\r\n",
-                f'Content-Disposition: form-data; name="owner_id"\r\n\r\n',
+                'Content-Disposition: form-data; name="owner_id"\r\n\r\n',
                 f"{self.ids['alice']}\r\n",
                 f"--{boundary}\r\n",
                 f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n',
@@ -384,9 +380,7 @@ class Demo:
         self.title("Denormalized read model (Member 3): derived, event-fed, rebuildable")
         self.show("stats", self.call("GET", "/api/v1/read-model/stats"))
         self.show("rebuild", self.call("POST", "/api/v1/read-model/rebuild"))
-        self.show(
-            "single-table read", self.call("GET", "/api/v1/read-model/posts?limit=3")
-        )
+        self.show("single-table read", self.call("GET", "/api/v1/read-model/posts?limit=3"))
         time.sleep(self.pause)
 
         # 19 ------------------------------------------------------------------
@@ -396,9 +390,11 @@ class Demo:
         stats = self.call("GET", "/api/v1/shards/stats")
         self.show(
             "stats",
-            {k: stats[k] for k in ("shard_count", "total_requests", "healthy_shards")}
-            if isinstance(stats, dict)
-            else stats,
+            (
+                {k: stats[k] for k in ("shard_count", "total_requests", "healthy_shards")}
+                if isinstance(stats, dict)
+                else stats
+            ),
         )
         self.show(
             "route a raw key",
@@ -422,12 +418,8 @@ class Demo:
         self.show(
             "metrics (abridged)",
             {
-                "counters": {
-                    k: v for k, v in metrics.get("counters", {}).items() if v
-                },
-                "request_latency_ms": metrics.get("histograms", {}).get(
-                    "request_latency_ms"
-                ),
+                "counters": {k: v for k, v in metrics.get("counters", {}).items() if v},
+                "request_latency_ms": metrics.get("histograms", {}).get("request_latency_ms"),
                 "cache": {
                     k: metrics.get("cache", {}).get(k)
                     for k in ("cache_hits", "cache_misses", "hit_ratio", "backend")
