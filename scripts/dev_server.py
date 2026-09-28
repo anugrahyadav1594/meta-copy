@@ -29,6 +29,11 @@ sys.path.insert(0, str(_ROOT / "services" / "shard-router"))
 sys.path.insert(0, str(_ROOT / "apps"))
 
 from models import Base  # noqa: E402
+
+# Modes that already imply a shard topology: `--sharded` must not override them.
+SHARDED_MODE_NAMES = frozenset(
+    {"SHARDED", "SHARDED_REPLICATED", "SHARDED_CACHED", "FULL_DISTRIBUTED"}
+)
 from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
 
 from tests.support.pgclusters import PgClusters  # noqa: E402
@@ -73,7 +78,15 @@ def main() -> None:
     # configure settings via environment BEFORE importing the app
     os.environ["DATABASE_URL"] = uris["canonical"]
     if args.sharded:
-        os.environ["MODE"] = "SHARDED"
+        # `--sharded` turns the shard topology on; it must NOT downgrade a
+        # richer mode the operator asked for (SHARDED_CACHED,
+        # SHARDED_REPLICATED, FULL_DISTRIBUTED ...).
+        explicit = (os.environ.get("MODE") or "").upper()
+        os.environ["MODE"] = (
+            explicit
+            if explicit in SHARDED_MODE_NAMES
+            else "SHARDED"
+        )
         os.environ["SHARDING_ENABLED"] = "true"
         os.environ["SHARD_COUNT"] = "4"
         os.environ["SHARDING_STRATEGY"] = args.strategy
@@ -81,7 +94,7 @@ def main() -> None:
         for i in range(5):
             os.environ[f"SHARD_{i}_URL"] = uris[f"shard-{i}"]
     else:
-        os.environ["MODE"] = "NORMALIZED"
+        os.environ.setdefault("MODE", "NORMALIZED")
         os.environ["SHARDING_ENABLED"] = "false"
 
     if args.seed:
@@ -115,7 +128,7 @@ def main() -> None:
 
     print(
         f"\nMetaScale API starting on http://{args.host}:{args.port} "
-        f"(mode={'SHARDED' if args.sharded else 'NORMALIZED'})"
+        f"(mode={os.environ['MODE']})"
     )
     print("Docs: /docs  |  stop with Ctrl-C\n")
     try:
